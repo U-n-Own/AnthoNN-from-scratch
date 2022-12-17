@@ -34,5 +34,25 @@ In the csv we have the index of the sample, the inputs and the target values:
 
 #TODO: One-hot encoding on the inputs
 """
+import pandas as pd 
+import numpy as np
 
-import 
+
+
+def load_monks_1_train():
+    
+    
+    monks_1_ds = pd.read_csv('../datasets/monk/monks-1.train', sep = ' ', header=None)
+
+    # Show first rows
+    print("Some rows...\n",monks_1_ds.head())
+
+    print("Shape:",monks_1_ds.shape,"\n")
+
+    # One hot encoding
+    monks_1_ds_one_hot = pd.get_dummies(monks_1_ds, columns=[1,2,3,4,5,6])
+
+    # Check if the one hot encoding worked
+    print("One-hot encoded\n",monks_1_ds_one_hot.head())
+
+    
