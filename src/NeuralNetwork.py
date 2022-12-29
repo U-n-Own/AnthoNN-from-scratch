@@ -1,6 +1,8 @@
+import copy
 from typing import List
 import numpy as np
-from function import ActivationFunction
+
+from src.function import ActivationFunction
 
 
 # TODO ci potrebbero essere degli errori con i tipi di numpy (e.g. np.float64, np.ndarray, np.matrix) -> fare testing
@@ -50,7 +52,7 @@ class Layer:
 
         # set random biases
         # TODO Per ora lasciare biases = 0. Dopo controllare come viene modificato l'algoritmo
-        # di backpropagation con biases != 0 - Penso rimanga invariato (testare con tensorflow per vedere se è vero)
+        # di backpropagation con biases != 0 - (bisogna derivare anche per i ogni b \in biases)
         self.biases = np.matrix(np.random.uniform(low=min_value_bias, high=max_value_bias, size=num_neurons))
 
     def calculate_outputs(self, inputs: np.matrix) -> np.matrix:
@@ -109,32 +111,60 @@ class NeuralNetwork:
 
         return inputs
 
-    # TODO per ora applica l'algoritmo di backpropagation una volta sola e solo per un input
-    def train(self, target_input: np.matrix, target_output: np.matrix, learning_rate: float) -> None:
+    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, epochs: int) -> None:
         """
-            Cambia il valore dei weights attraverso l'algoritmo di backpropagation
+            Applica l'algoritmo di backpropagation su più samples alla volta
+
+            :target_input: matrice(num_samples, num_inputs_rete_neurale)
+            :target_outputs: matrice(num_samples, num_neuroni_ultimo_layer)
+            :epochs: numero di iterazioni dell'algoritmo di backpropagation
+        """
+        if target_inputs is None:
+            raise ValueError("inputs must be != None")
+        if target_inputs.shape[1] != self.layers[0].num_inputs:
+            raise ValueError(f"inputs.shape ({target_inputs.shape[1]}) deve essere uguale al numero di input accettati dalla rete neurale ({self.layers[0].num_inputs})")
+
+        if target_outputs is None:
+            raise ValueError("target_outputs must be != None")
+        if target_outputs.shape[1] != self.layers[-1].num_neurons:
+            raise ValueError(f"target_outputs.shape ({target_outputs.shape[1]}) deve essere uguale al numero di neuroni dell'ultimo layer ({self.layers[-1].num_neurons})")
+        if target_outputs.shape != target_inputs.shape:
+            raise ValueError(f"target_outputs.shape ({target_outputs.shape}) deve essere uguale a target_inputs.shape ({target_inputs.shape})")
+
+        if learning_rate <= 0:
+            raise ValueError("learning_rate must be > 0")
+        if epochs < 0:
+            raise ValueError("epochs must be >= 0")
+
+
+        for _ in range(epochs):
+            deep_copy_layers: list[Layer] = copy.deepcopy(self.layers)
+
+            for target_input, target_output in zip(target_inputs, target_outputs):
+                self._backpropagation(target_input, target_output, learning_rate, deep_copy_layers)
+
+            for i in range(len(self.layers)):
+                self.layers[i].weights = deep_copy_layers[i].weights
+                self.layers[i].biases = deep_copy_layers[i].biases
+
+    # TODO per ora applica l'algoritmo di backpropagation una volta sola e solo per un input
+    def _backpropagation(self, target_input: np.matrix, target_output: np.matrix, learning_rate: float, deep_copy_layers: List[Layer]) -> None:
+        """
+            Applica l'algoritmo di backpropagation su tutto la rete neurale
 
             :target_input: matrice(1, num_inputs_rete_neurale)
             :target_outputs: matrice(1, num_neuroni_ultimo_layer)
+            :deep_copy_layers: copia della rete neurale dove poter salvare i pesi aggiornati
         """
-
-        if target_input is None:
-            raise ValueError("inputs must be != None")
-        if target_input.shape != (1, self.layers[0].num_inputs):
-            raise ValueError(f"inputs.shape ({target_input.shape}) deve essere uguale al numero di input accettati dalla rete neurale ({self.layers[0].num_inputs})")
-        if target_output is None:
-            raise ValueError("target_outputs must be != None")
-        if target_output.shape != (1, self.layers[-1].num_neurons, ):
-            raise ValueError(f"target_outputs.shape ({target_output.shape}) deve essere uguale al numero di neuroni dell'ultimo layer ({self.layers[-1].num_neurons})")
 
         # Backpropagation ultimo layer
         delta_error, delta_weight = self._backpropagation_output_layer(target_input, target_output)
-        self.layers[-1].weights += learning_rate * delta_weight
+        deep_copy_layers[-1].weights += learning_rate * delta_weight
 
         # Backpropagation hidden layer
         for i in range(len(self.layers) - 2, -1, -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
-            self.layers[i].weights += learning_rate * delta_weight
+            deep_copy_layers[i].weights += learning_rate * delta_weight
 
     def _backpropagation_output_layer(self, target_input: np.matrix, target_output: np.matrix) -> (np.matrix, np.matrix):
         """
