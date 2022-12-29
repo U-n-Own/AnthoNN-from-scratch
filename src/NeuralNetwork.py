@@ -1,11 +1,10 @@
 from typing import List
 import numpy as np
-from NeuralNetwork.function import IdentityFunction, SigmoideFunction
+from function import ActivationFunction
 
 
 # TODO ci potrebbero essere degli errori con i tipi di numpy (e.g. np.float64, np.ndarray, np.matrix) -> fare testing
-# TODO testare maggiormente neural network (soprattuto per i casi estremi)
-
+# TODO confrontare con keras o tensorflow, etc.
 class Layer:
     """
         N.B. l'input non viene considerato come layer
@@ -19,28 +18,39 @@ class Layer:
     net: np.ndarray = None  # matrice (num_neurons x 1)
     output: np.ndarray = None  # matrice (num_neurons x 1)
 
-    activation_function = IdentityFunction # TODO creare superclasse activation_function e creare due sottoclassi: SigmoideFunction e IdentityFunction
+    activation_function: ActivationFunction
 
     def __init__(self, num_neurons: int, num_inputs: int,
+                 activation_function: ActivationFunction,
                  min_value_weight=0.01, max_value_weight=0.1,
                  min_value_bias=0, max_value_bias=0):
         """
         :param num_neurons: numero di neuroni del layer
-        :param num_inputs: numero input di ogni unit (i.e. numero di neuroni del layer precedente)
+        :param num_inputs: numero input di ogni unit (i.e. Numero di neuroni del layer precedente)
         """
+
         if num_neurons <= 0:
             raise ValueError("num_neurons must be > 0")
         if num_inputs <= 0:
             raise ValueError("num_inputs must be > 0")
+        if activation_function is None:
+            raise ValueError("activation_function must be != None")
+        if min_value_weight > max_value_weight:
+            raise ValueError(f"min_value_weight must be ({min_value_weight}) <= max_value_weight ({min_value_weight})")
+        if min_value_bias > max_value_bias:
+            raise ValueError(f"min_value_bias must be ({min_value_bias}) <= max_value_bias ({max_value_bias}) ")
 
         self.num_neurons = num_neurons
         self.num_inputs = num_inputs
+
+        self.activation_function = activation_function
 
         # set random weights
         self.weights = np.matrix(np.random.uniform(low=min_value_weight, high=max_value_weight, size=(num_neurons, num_inputs)))
 
         # set random biases
-        #TODO cambiare il valore dei biases iniziale e vedere come cambiarli con l'algoritmo di backpropagation
+        # TODO Per ora lasciare biases = 0. Dopo controllare come viene modificato l'algoritmo
+        # di backpropagation con biases != 0 - Penso rimanga invariato (testare con tensorflow per vedere se è vero)
         self.biases = np.matrix(np.random.uniform(low=min_value_bias, high=max_value_bias, size=num_neurons))
 
     def calculate_outputs(self, inputs: np.matrix) -> np.matrix:
@@ -85,7 +95,6 @@ class NeuralNetwork:
         :param inputs: matrice di inputs (dimensione: num_samples x num_features)
         :return: matrice di output (dimensione: num_samples x num_output_neurons)
         (spiegazione grafica: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#b7fb73f5f1ac43deb096fd64f968c540)
-
         """
 
         if inputs is None:
@@ -136,9 +145,9 @@ class NeuralNetwork:
             :target_output: matrice(1, num_neuroni_ultimo_layer)
 
             :return: delta_error, delta_weight
-            :delta_error matrice(1, num_neurons_ultimo layer). l'i-esimo elemento è il delta_error del i-esimo neurone.
+            :delta_error matrice(1, num_neurons_ultimo layer). L'i-esimo elemento è il delta_error del i-esimo neurone.
             :delta_weight matrice(num_neuroni_layer_precedente, num_neuroni_ultimo layer).
-                          l'i-esimo elemento è il delta_weight del i-esimo neurone
+                          L'i-esimo elemento è il delta_weight del i-esimo neurone
                           (come indicato qui: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#91e92e1fbf8648b8880aadeb95c6770c)
         """
 
@@ -161,7 +170,7 @@ class NeuralNetwork:
         Spiegazione: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#d86bff7059f0498397a8cdeae1c1631d
         :index_layer: indice del layer "corrente" (i.e. layer di cui aggiorniamo i weights)
         :target_input: matrice(1, num_inputs_rete_neurale)
-        :delta_error_next_layer matrice(1, num_neuroni_layer_successivo). l'i-esimo elemento è il delta_error del i-esimo neurone.
+        :delta_error_next_layer matrice(1, num_neuroni_layer_successivo). L'i-esimo elemento è il delta_error del i-esimo neurone.
         """
 
         if target_input is None:
@@ -187,14 +196,13 @@ class NeuralNetwork:
         return delta_error, delta_weight
 
 
-# TODO forse conviene gestire l'input come vettore e chiamare più volte questo metodo (NO)
-# TODO testare se funziona dopo le modifiche
-def calculate_total_error(target_output: np.ndarray, output_nn: np.ndarray) -> np.float64:
+def calculate_total_error(target_output: np.matrix, output_nn: np.matrix) -> np.float64:
     """
     implementazione dell'errore spiegato a lezione: https://www.notion.so/Back-propagation-c35b14a0570246ebaf5f82722a0cb8a3#3bbf8fb43aa94a0a98d29d80076d79e3
 
-    :param target_output: output desiderato
-    :param output_nn: output della rete neurale
+    :param target_output: matrice dell'output desiderato (dimensione: num_samples x num_output_neurons)
+    :param output_nn: matrice dell'output della rete neurale (dimensione: num_samples x num_output_neurons)
+
     :return: errore totale
     """
     if target_output is None:
@@ -202,8 +210,8 @@ def calculate_total_error(target_output: np.ndarray, output_nn: np.ndarray) -> n
     if output_nn is None:
         raise ValueError("output_nn must be != None")
     if target_output.shape != output_nn.shape:
-        raise ValueError("target_output and output_nn must have the same shape")
+        raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
 
-    error_vector = np.sum(np.square(target_output - output_nn), axis=1) * 0.5  # il p-esimo elemento rappresenta E_p (https://www.notion.so/Back-propagation-c35b14a0570246ebaf5f82722a0cb8a3#3bbf8fb43aa94a0a98d29d80076d79e3)
+    error_vector = np.sum(np.square(target_output - output_nn), axis=1) * 0.5  # Matrice dove la p-esimo riga rappresenta E_p (https://www.notion.so/Back-propagation-c35b14a0570246ebaf5f82722a0cb8a3#3bbf8fb43aa94a0a98d29d80076d79e3)
     error_total = np.sum(error_vector)
     return error_total
