@@ -2,7 +2,7 @@ import copy
 from typing import List
 import numpy as np
 
-from src.function import ActivationFunction
+from function import ActivationFunction
 
 
 # TODO ci potrebbero essere degli errori con i tipi di numpy (e.g. np.float64, np.ndarray, np.matrix) -> fare testing
