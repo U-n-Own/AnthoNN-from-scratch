@@ -33,10 +33,19 @@ class TestNeuralNetwork(unittest.TestCase):
         
         self.assertGreaterEqual(np.min(nn.layers[0].weights), 0.01)
         self.assertLessEqual(np.max(nn.layers[0].weights), 0.1)
+        self.assertGreaterEqual(np.min(nn.layers[0].biases), 0)
+        self.assertLessEqual(np.max(nn.layers[0].biases), 0)
+        
+        self.assertGreaterEqual(np.min(nn.layers[1].weights), 0.01)
+        self.assertLessEqual(np.max(nn.layers[1].weights), 0.1)
         self.assertGreaterEqual(np.min(nn.layers[1].biases), 0)
         self.assertLessEqual(np.max(nn.layers[1].biases), 0)
+        
         self.assertGreaterEqual(np.min(nn.layers[2].weights), 0.01)
         self.assertLessEqual(np.max(nn.layers[2].weights), 0.1)
+        self.assertGreaterEqual(np.min(nn.layers[2].biases), 0)
+        self.assertLessEqual(np.max(nn.layers[2].biases), 0)
+        
 
     def test_forward_propagation(self):
         # Test the forward propagation function
