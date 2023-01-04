@@ -2,7 +2,7 @@ import copy
 from typing import List
 import numpy as np
 
-from function import ActivationFunction
+from src.function import ActivationFunction
 
 
 # TODO ci potrebbero essere degli errori con i tipi di numpy (e.g. np.float64, np.ndarray, np.matrix) -> fare testing
@@ -111,7 +111,7 @@ class NeuralNetwork:
 
         return inputs
 
-    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, epochs: int) -> None:
+    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, regularization_term: float, epochs: int) -> None:
         """
             Applica l'algoritmo di backpropagation su più samples alla volta
 
@@ -141,14 +141,18 @@ class NeuralNetwork:
             deep_copy_layers: list[Layer] = copy.deepcopy(self.layers)
 
             for target_input, target_output in zip(target_inputs, target_outputs):
-                self._backpropagation(target_input, target_output, learning_rate, deep_copy_layers)
+                self._backpropagation(target_input=target_input, target_output=target_output,
+                                      learning_rate=learning_rate, regularization_term=regularization_term,
+                                      deep_copy_layers=deep_copy_layers)
 
             for i in range(len(self.layers)):
                 self.layers[i].weights = deep_copy_layers[i].weights
                 self.layers[i].biases = deep_copy_layers[i].biases
 
-    # TODO per ora applica l'algoritmo di backpropagation una volta sola e solo per un input
-    def _backpropagation(self, target_input: np.matrix, target_output: np.matrix, learning_rate: float, deep_copy_layers: List[Layer]) -> None:
+
+    def _backpropagation(self, target_input: np.matrix, target_output: np.matrix,
+                         learning_rate: float, regularization_term: float,
+                         deep_copy_layers: List[Layer]) -> None:
         """
             Applica l'algoritmo di backpropagation su tutto la rete neurale
 
@@ -159,12 +163,12 @@ class NeuralNetwork:
 
         # Backpropagation ultimo layer
         delta_error, delta_weight = self._backpropagation_output_layer(target_input, target_output)
-        deep_copy_layers[-1].weights += learning_rate * delta_weight
+        deep_copy_layers[-1].weights = deep_copy_layers[-1].weights + learning_rate * delta_weight - 2*regularization_term*deep_copy_layers[-1].weights
 
         # Backpropagation hidden layer
         for i in range(len(self.layers) - 2, -1, -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
-            deep_copy_layers[i].weights += learning_rate * delta_weight
+            deep_copy_layers[i].weights = deep_copy_layers[i].weights + learning_rate * delta_weight - 2*regularization_term*deep_copy_layers[i].weights
 
     def _backpropagation_output_layer(self, target_input: np.matrix, target_output: np.matrix) -> (np.matrix, np.matrix):
         """
