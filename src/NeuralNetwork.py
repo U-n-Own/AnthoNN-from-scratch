@@ -24,7 +24,7 @@ class Layer:
 
     def __init__(self, num_neurons: int, num_inputs: int,
                  activation_function: ActivationFunction,
-                 min_value_weight=0.01, max_value_weight=0.1,
+                 min_value_weight=-0.1, max_value_weight=0.1,
                  min_value_bias=0, max_value_bias=0):
         """
         :param num_neurons: numero di neuroni del layer
@@ -111,13 +111,15 @@ class NeuralNetwork:
 
         return inputs
 
-    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, regularization_term: float, epochs: int) -> None:
+    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, regularization_term: float, epochs: int) -> List[np.float64]:
         """
             Applica l'algoritmo di backpropagation su più samples alla volta
 
             :target_input: matrice(num_samples, num_inputs_rete_neurale)
             :target_outputs: matrice(num_samples, num_neuroni_ultimo_layer)
             :epochs: numero di iterazioni dell'algoritmo di backpropagation
+
+            :return: lista di errori. L'i-esimo elemento contiene l'errore dell'i-esimo epoch. L'errore viene calcolato con calculate_total_error
         """
         if target_inputs is None:
             raise ValueError("inputs must be != None")
@@ -137,6 +139,8 @@ class NeuralNetwork:
             raise ValueError("epochs must be >= 0")
 
 
+        error_history = []
+
         for _ in range(epochs):
             deep_copy_layers: list[Layer] = copy.deepcopy(self.layers)
 
@@ -148,6 +152,11 @@ class NeuralNetwork:
             for i in range(len(self.layers)):
                 self.layers[i].weights = deep_copy_layers[i].weights
                 self.layers[i].biases = deep_copy_layers[i].biases
+
+            output_nn = self.predict(inputs=target_inputs)
+            error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
+
+        return error_history
 
 
     def _backpropagation(self, target_input: np.matrix, target_output: np.matrix,
@@ -246,6 +255,6 @@ def calculate_total_error(target_output: np.matrix, output_nn: np.matrix) -> np.
     if target_output.shape != output_nn.shape:
         raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
 
-    error_vector = np.sum(np.square(target_output - output_nn), axis=1) * 0.5  # Matrice dove la p-esimo riga rappresenta E_p (https://www.notion.so/Back-propagation-c35b14a0570246ebaf5f82722a0cb8a3#3bbf8fb43aa94a0a98d29d80076d79e3)
+    error_vector = np.sum(np.square(target_output - output_nn), axis=1)
     error_total = np.sum(error_vector)
     return error_total
