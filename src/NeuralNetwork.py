@@ -17,6 +17,8 @@ class Layer:
     weights: np.matrix  # matrice
     biases: np.ndarray  # vettore
 
+    previous_delta_weight: np.matrix = None # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch precedente. Usato per applicare il momentum (N.B. non contiene il learning rate)
+
     net: np.ndarray = None  # matrice (num_neurons x 1)
     output: np.ndarray = None  # matrice (num_neurons x 1)
 
@@ -49,6 +51,8 @@ class Layer:
 
         # set random weights
         self.weights = np.matrix(np.random.uniform(low=min_value_weight, high=max_value_weight, size=(num_neurons, num_inputs)))
+
+        self.previous_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
 
         # set random biases
         # TODO Per ora lasciare biases = 0. Dopo controllare come viene modificato l'algoritmo
@@ -111,7 +115,7 @@ class NeuralNetwork:
 
         return inputs
 
-    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, regularization_term: float, epochs: int) -> List[np.float64]:
+    def train(self, target_inputs: np.matrix, target_outputs: np.matrix, learning_rate: float, regularization_term: float, momentum_term: float, epochs: int) -> List[np.float64]:
         """
             Applica l'algoritmo di backpropagation su più samples alla volta
 
@@ -141,26 +145,31 @@ class NeuralNetwork:
 
         error_history = []
 
-        for _ in range(epochs):
-            deep_copy_layers: list[Layer] = copy.deepcopy(self.layers)
+        try:
+            for _ in range(epochs):
+                deep_copy_layers: list[Layer] = copy.deepcopy(self.layers)
 
-            for target_input, target_output in zip(target_inputs, target_outputs):
-                self._backpropagation(target_input=target_input, target_output=target_output,
-                                      learning_rate=learning_rate, regularization_term=regularization_term,
-                                      deep_copy_layers=deep_copy_layers)
+                for target_input, target_output in zip(target_inputs, target_outputs):
+                    self._backpropagation(target_input=target_input, target_output=target_output,
+                                          learning_rate=learning_rate,
+                                          regularization_term=regularization_term, momentum_term = momentum_term,
+                                          deep_copy_layers=deep_copy_layers)
 
-            for i in range(len(self.layers)):
-                self.layers[i].weights = deep_copy_layers[i].weights
-                self.layers[i].biases = deep_copy_layers[i].biases
+                for i in range(len(self.layers)):
+                    self.layers[i].weights = deep_copy_layers[i].weights
+                    self.layers[i].biases = deep_copy_layers[i].biases
 
-            output_nn = self.predict(inputs=target_inputs)
-            error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
+                output_nn = self.predict(inputs=target_inputs)
+                error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
+
+        except OverflowError:
+            raise OverflowError("Errore di overflow durante il training")
 
         return error_history
 
 
     def _backpropagation(self, target_input: np.matrix, target_output: np.matrix,
-                         learning_rate: float, regularization_term: float,
+                         learning_rate: float, regularization_term: float, momentum_term: float,
                          deep_copy_layers: List[Layer]) -> None:
         """
             Applica l'algoritmo di backpropagation su tutto la rete neurale
@@ -172,12 +181,37 @@ class NeuralNetwork:
 
         # Backpropagation ultimo layer
         delta_error, delta_weight = self._backpropagation_output_layer(target_input, target_output)
-        deep_copy_layers[-1].weights = deep_copy_layers[-1].weights + learning_rate * delta_weight - 2*regularization_term*deep_copy_layers[-1].weights
+        self._aggiorna_weights(layer=deep_copy_layers[-1], delta_weight=delta_weight, learning_rate=learning_rate,
+                               regularization_term=regularization_term, momentum_term=momentum_term)
+        self._check_overflow(weight=deep_copy_layers[-1].weights)
 
         # Backpropagation hidden layer
         for i in range(len(self.layers) - 2, -1, -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
-            deep_copy_layers[i].weights = deep_copy_layers[i].weights + learning_rate * delta_weight - 2*regularization_term*deep_copy_layers[i].weights
+            self._aggiorna_weights(layer=deep_copy_layers[i], delta_weight=delta_weight, learning_rate=learning_rate,
+                                   regularization_term=regularization_term, momentum_term=momentum_term)
+            self._check_overflow(weight=deep_copy_layers[-1].weights)
+
+    @staticmethod
+    def _aggiorna_weights(layer: Layer, delta_weight: np.matrix, learning_rate: float,
+                          momentum_term: float, regularization_term: float) -> None:
+        """
+        Funzione di supporto per "_backpropagation": dato un layer, aggiorna i pesi usando il momentum e la regularizzazione
+        """
+
+        layer.weights = layer.weights + learning_rate * delta_weight # Aggiornamento pesi "base" (senza momentum e regularization)
+        layer.weights += momentum_term*learning_rate*layer.previous_delta_weight # Aggiornamento pesi con momentum
+        layer.weights += - 2*regularization_term*layer.weights # Aggiornamento pesi con regularization
+
+        layer.previous_delta_weight = delta_weight # Memorizzazione delta_weight per il prossimo epoch
+
+    @staticmethod
+    def _check_overflow(weight: np.matrix) -> None:
+        """
+        Funzione di supporto per "_backpropagation": controlla se ci sono overflow
+        """
+        if np.isinf(weight).any():
+            raise OverflowError("Overflow durante il backpropagation")
 
     def _backpropagation_output_layer(self, target_input: np.matrix, target_output: np.matrix) -> (np.matrix, np.matrix):
         """
