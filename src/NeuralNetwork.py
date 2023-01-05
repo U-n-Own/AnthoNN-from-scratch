@@ -18,6 +18,8 @@ class Layer:
     biases: np.ndarray  # vettore
 
     previous_delta_weight: np.matrix = None # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch precedente. Usato per applicare il momentum (N.B. non contiene il learning rate)
+    current_delta_weight: np.matrix = None # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch corrente. Usato per applicare il momentum (N.B. non contiene il learning rate)
+
 
     net: np.ndarray = None  # matrice (num_neurons x 1)
     output: np.ndarray = None  # matrice (num_neurons x 1)
@@ -53,6 +55,8 @@ class Layer:
         self.weights = np.matrix(np.random.uniform(low=min_value_weight, high=max_value_weight, size=(num_neurons, num_inputs)))
 
         self.previous_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
+        self.current_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
+
 
         # set random biases
         # TODO Per ora lasciare biases = 0. Dopo controllare come viene modificato l'algoritmo
@@ -149,12 +153,12 @@ class NeuralNetwork:
 
                 for target_input, target_output in zip(target_inputs, target_outputs):
                     self._backpropagation(target_input=target_input, target_output=target_output,
-                                          learning_rate=learning_rate,
-                                          regularization_term=regularization_term, momentum_term = momentum_term,
-                                          deep_copy_layers=deep_copy_layers)
+                                          learning_rate=learning_rate, regularization_term=regularization_term,
+                                          momentum_term = momentum_term, deep_copy_layers=deep_copy_layers)
 
                 for i in range(len(self.layers)):
                     self.layers[i].weights = deep_copy_layers[i].weights
+                    self.layers[i].previous_delta_weight = deep_copy_layers[i].current_delta_weight
                     self.layers[i].biases = deep_copy_layers[i].biases
 
                 output_nn = self.predict(inputs=target_inputs)
@@ -188,7 +192,7 @@ class NeuralNetwork:
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
             self._aggiorna_weights(layer=deep_copy_layers[i], delta_weight=delta_weight, learning_rate=learning_rate,
                                    regularization_term=regularization_term, momentum_term=momentum_term)
-            self._check_overflow(weight=deep_copy_layers[-1].weights)
+            self._check_overflow(weight=deep_copy_layers[i].weights)
 
     @staticmethod
     def _aggiorna_weights(layer: Layer, delta_weight: np.matrix, learning_rate: float,
@@ -198,10 +202,12 @@ class NeuralNetwork:
         """
 
         layer.weights = layer.weights + learning_rate * delta_weight # Aggiornamento pesi "base" (senza momentum e regularization)
-        layer.weights += momentum_term*learning_rate*layer.previous_delta_weight # Aggiornamento pesi con momentum
+        layer.weights += learning_rate * momentum_term * layer.previous_delta_weight # Aggiornamento pesi con momentum
         layer.weights += - 2*regularization_term*layer.weights # Aggiornamento pesi con regularization
 
-        layer.previous_delta_weight = delta_weight # Memorizzazione delta_weight per il prossimo epoch
+        layer.current_delta_weight += delta_weight
+
+
 
     @staticmethod
     def _check_overflow(weight: np.matrix) -> None:
