@@ -149,17 +149,14 @@ class NeuralNetwork:
 
         try:
             for _ in range(epochs):
-                deep_copy_layers: list[Layer] = copy.deepcopy(self.layers)
+                for layer in self.layers:
+                    layer.current_delta_weight = np.matrix(np.zeros((layer.num_neurons, layer.num_inputs)))
 
                 for target_input, target_output in zip(target_inputs, target_outputs):
-                    self._backpropagation(target_input=target_input, target_output=target_output,
-                                          learning_rate=learning_rate, regularization_term=regularization_term,
-                                          momentum_term = momentum_term, deep_copy_layers=deep_copy_layers)
+                    self._backpropagation(target_input=target_input, target_output=target_output)
 
-                for i in range(len(self.layers)):
-                    self.layers[i].weights = deep_copy_layers[i].weights
-                    self.layers[i].previous_delta_weight = deep_copy_layers[i].current_delta_weight
-                    self.layers[i].biases = deep_copy_layers[i].biases
+                for layer in self.layers:
+                    layer.weights = layer.weights + learning_rate * layer.current_delta_weight
 
                 output_nn = self.predict(inputs=target_inputs)
                 error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
@@ -170,44 +167,22 @@ class NeuralNetwork:
         return error_history
 
 
-    def _backpropagation(self, target_input: np.matrix, target_output: np.matrix,
-                         learning_rate: float, regularization_term: float, momentum_term: float,
-                         deep_copy_layers: List[Layer]) -> None:
+    def _backpropagation(self, target_input: np.matrix, target_output: np.matrix) -> None:
         """
-            Applica l'algoritmo di backpropagation su tutto la rete neurale
+            Calcola il delta_weight tramite l'algoritmo di backpropagation
 
             :target_input: matrice(1, num_inputs_rete_neurale)
             :target_outputs: matrice(1, num_neuroni_ultimo_layer)
-            :deep_copy_layers: copia della rete neurale dove poter salvare i pesi aggiornati
         """
 
         # Backpropagation ultimo layer
         delta_error, delta_weight = self._backpropagation_output_layer(target_input, target_output)
-        self._aggiorna_weights(layer=deep_copy_layers[-1], delta_weight=delta_weight, learning_rate=learning_rate,
-                               regularization_term=regularization_term, momentum_term=momentum_term)
-        self._check_overflow(weight=deep_copy_layers[-1].weights)
+        self.layers[-1].current_delta_weight += delta_weight
 
         # Backpropagation hidden layer
         for i in range(len(self.layers) - 2, -1, -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
-            self._aggiorna_weights(layer=deep_copy_layers[i], delta_weight=delta_weight, learning_rate=learning_rate,
-                                   regularization_term=regularization_term, momentum_term=momentum_term)
-            self._check_overflow(weight=deep_copy_layers[i].weights)
-
-    @staticmethod
-    def _aggiorna_weights(layer: Layer, delta_weight: np.matrix, learning_rate: float,
-                          momentum_term: float, regularization_term: float) -> None:
-        """
-        Funzione di supporto per "_backpropagation": dato un layer, aggiorna i pesi usando il momentum e la regularizzazione
-        """
-
-        layer.weights = layer.weights + learning_rate * delta_weight # Aggiornamento pesi "base" (senza momentum e regularization)
-        layer.weights += learning_rate * momentum_term * layer.previous_delta_weight # Aggiornamento pesi con momentum
-        layer.weights += - 2*regularization_term*layer.weights # Aggiornamento pesi con regularization
-
-        layer.current_delta_weight += delta_weight
-
-
+            self.layers[i].current_delta_weight += delta_weight
 
     @staticmethod
     def _check_overflow(weight: np.matrix) -> None:
@@ -293,6 +268,6 @@ def calculate_total_error(target_output: np.matrix, output_nn: np.matrix) -> np.
     if target_output.shape != output_nn.shape:
         raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
 
-    error_vector = np.sum(np.square(target_output - output_nn), axis=1) * 0.5
+    error_vector = np.sum(np.square(target_output - output_nn), axis=1)
     error_total = np.sum(error_vector)
     return error_total
