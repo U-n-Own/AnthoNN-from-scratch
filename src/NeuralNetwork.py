@@ -134,8 +134,6 @@ class NeuralNetwork:
             raise ValueError("target_outputs must be != None")
         if target_outputs.shape[1] != self.layers[-1].num_neurons:
             raise ValueError(f"target_outputs.shape ({target_outputs.shape[1]}) deve essere uguale al numero di neuroni dell'ultimo layer ({self.layers[-1].num_neurons})")
-        if target_outputs.shape != target_inputs.shape:
-            raise ValueError(f"target_outputs.shape ({target_outputs.shape}) deve essere uguale a target_inputs.shape ({target_inputs.shape})")
 
         if learning_rate <= 0:
             raise ValueError("learning_rate must be > 0")
@@ -289,6 +287,6 @@ def calculate_total_error(target_output: np.matrix, output_nn: np.matrix) -> np.
     if target_output.shape != output_nn.shape:
         raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
 
-    error_vector = np.sum(np.square(target_output - output_nn), axis=1)
+    error_vector = np.sum(np.square(target_output - output_nn), axis=1) * 0.5
     error_total = np.sum(error_vector)
     return error_total
