@@ -5,8 +5,6 @@ import numpy as np
 from src.function import ActivationFunction
 
 
-# TODO ci potrebbero essere degli errori con i tipi di numpy (e.g. np.float64, np.ndarray, np.matrix) -> fare testing
-# TODO confrontare con keras o tensorflow, etc.
 class Layer:
     """
         N.B. l'input non viene considerato come layer
@@ -150,13 +148,16 @@ class NeuralNetwork:
         try:
             for _ in range(epochs):
                 for layer in self.layers:
-                    layer.current_delta_weight = np.matrix(np.zeros((layer.num_neurons, layer.num_inputs)))
+                    layer.previous_delta_weight = layer.current_delta_weight.copy()
+                    layer.current_delta_weight = np.matrix(np.zeros(layer.current_delta_weight.shape))
 
                 for target_input, target_output in zip(target_inputs, target_outputs):
                     self._backpropagation(target_input=target_input, target_output=target_output)
 
                 for layer in self.layers:
-                    layer.weights = layer.weights + learning_rate * layer.current_delta_weight
+                    layer.weights = layer.weights + learning_rate*layer.current_delta_weight + \
+                                    learning_rate*momentum_term*layer.previous_delta_weight - \
+                                    2*regularization_term*layer.weights
 
                 output_nn = self.predict(inputs=target_inputs)
                 error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
