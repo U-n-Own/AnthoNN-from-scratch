@@ -18,6 +18,7 @@ class Layer:
     previous_delta_weight: np.matrix = None # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch precedente. Usato per applicare il momentum (N.B. non contiene il learning rate)
     current_delta_weight: np.matrix = None # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch corrente. Usato per applicare il momentum (N.B. non contiene il learning rate)
 
+    current_delta_bias: np.ndarray = None
 
     net: np.ndarray = None  # matrice (num_neurons x 1)
     output: np.ndarray = None  # matrice (num_neurons x 1)
@@ -26,8 +27,8 @@ class Layer:
 
     def __init__(self, num_neurons: int, num_inputs: int,
                  activation_function: ActivationFunction,
-                 min_value_weight=-0.1, max_value_weight=0.1,
-                 min_value_bias=0, max_value_bias=0):
+                 min_value_weight=0.01, max_value_weight=0.2,
+                 min_value_bias=0.01, max_value_bias=0.2):
         """
         :param num_neurons: numero di neuroni del layer
         :param num_inputs: numero input di ogni unit (i.e. Numero di neuroni del layer precedente)
@@ -49,11 +50,14 @@ class Layer:
 
         self.activation_function = activation_function
 
-        # set random weights
+        # set random biases and weights
+        self.biases = np.matrix(np.random.uniform(low=min_value_bias, high=max_value_bias, size=(1, num_neurons)))
         self.weights = np.matrix(np.random.uniform(low=min_value_weight, high=max_value_weight, size=(num_neurons, num_inputs)))
+
 
         self.previous_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
         self.current_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
+        self.current_delta_bias = np.matrix(np.zeros((1, num_neurons)))
 
 
         # set random biases
@@ -151,13 +155,17 @@ class NeuralNetwork:
                     layer.previous_delta_weight = layer.current_delta_weight.copy()
                     layer.current_delta_weight = np.matrix(np.zeros(layer.current_delta_weight.shape))
 
+                    layer.current_delta_bias = np.matrix(np.zeros(layer.current_delta_bias.shape))
+
                 for target_input, target_output in zip(target_inputs, target_outputs):
+                    #_backpropagation aggiorna il valore current_delta_weight
                     self._backpropagation(target_input=target_input, target_output=target_output)
 
                 for layer in self.layers:
                     layer.weights = layer.weights + learning_rate*layer.current_delta_weight + \
                                     learning_rate*momentum_term*layer.previous_delta_weight - \
                                     2*regularization_term*layer.weights
+                    layer.biases = layer.biases + learning_rate*layer.current_delta_bias
 
                 output_nn = self.predict(inputs=target_inputs)
                 error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
@@ -179,11 +187,13 @@ class NeuralNetwork:
         # Backpropagation ultimo layer
         delta_error, delta_weight = self._backpropagation_output_layer(target_input, target_output)
         self.layers[-1].current_delta_weight += delta_weight
+        self.layers[-1].current_delta_bias += delta_error
 
         # Backpropagation hidden layer
         for i in range(len(self.layers) - 2, -1, -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
             self.layers[i].current_delta_weight += delta_weight
+            self.layers[i].current_delta_bias += delta_error
 
     @staticmethod
     def _check_overflow(weight: np.matrix) -> None:
