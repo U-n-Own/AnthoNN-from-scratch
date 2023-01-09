@@ -100,6 +100,14 @@ class NeuralNetwork:
 
         self.layers = layers
 
+    def validate(self, validation_inputs, validation_outputs) -> float:
+        """ Evaluating the network error on validation data """
+
+        predicted_outputs = self.predict(validation_inputs) 
+        validation_error = calculate_total_error(validation_outputs, predicted_outputs)
+        
+        return validation_error
+
     def predict(self, inputs: np.matrix) -> np.matrix:
         """
         calcola l'output della rete neurale dato inputs
