@@ -55,3 +55,10 @@ class ReLuFunction(ActivationFunction):
     def derivative(self, x: float) -> float:
         """ Can't derivate ReLu in 0, it's undefined, we simply return 0 """
         return 1 if x > 0 else 0
+
+class TanhFunction(ActivationFunction):
+    def output(self, x: float) -> float:
+        return np.tanh(x)
+
+    def derivative(self, x: float) -> float:
+        return 1 - np.tanh(x)**2
