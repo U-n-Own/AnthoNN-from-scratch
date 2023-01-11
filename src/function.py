@@ -62,3 +62,15 @@ class TanhFunction(ActivationFunction):
 
     def derivative(self, x: float) -> float:
         return 1 - np.tanh(x)**2
+
+class SoftplusFunction(ActivationFunction):
+    """
+    The softplus activation function Y = log(1 + e^X) ensures that the output is always positive. 
+    This activation function is a smooth continuous version of ReluFunction.
+    """
+
+    def output(self, x: float) -> float:
+        return np.log(1+np.exp(x))
+
+    def derivative(self, x: float)-> float:
+        return np.exp(x) / (np.exp(x)+1)
