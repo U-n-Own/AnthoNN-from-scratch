@@ -1,4 +1,3 @@
-import copy
 from typing import List
 import numpy as np
 
@@ -27,8 +26,8 @@ class Layer:
 
     def __init__(self, num_neurons: int, num_inputs: int,
                  activation_function: ActivationFunction,
-                 min_value_weight=0.01, max_value_weight=0.2,
-                 min_value_bias=0.01, max_value_bias=0.2):
+                 min_value_weight=-0.03, max_value_weight=0.2,
+                 min_value_bias=-0.01, max_value_bias=0.2):
         """
         :param num_neurons: numero di neuroni del layer
         :param num_inputs: numero input di ogni unit (i.e. Numero di neuroni del layer precedente)
@@ -58,12 +57,6 @@ class Layer:
         self.previous_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
         self.current_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
         self.current_delta_bias = np.matrix(np.zeros((1, num_neurons)))
-
-
-        # set random biases
-        # TODO Per ora lasciare biases = 0. Dopo controllare come viene modificato l'algoritmo
-        # di backpropagation con biases != 0 - (bisogna derivare anche per i ogni b \in biases)
-        self.biases = np.matrix(np.random.uniform(low=min_value_bias, high=max_value_bias, size=num_neurons))
 
     def calculate_outputs(self, inputs: np.matrix) -> np.matrix:
         """
@@ -103,9 +96,9 @@ class NeuralNetwork:
     def validate(self, validation_inputs, validation_outputs) -> float:
         """ Evaluating the network error on validation data """
 
-        predicted_outputs = self.predict(validation_inputs) 
+        predicted_outputs = self.predict(validation_inputs)
         validation_error = calculate_total_error(validation_outputs, predicted_outputs)
-        
+
         return validation_error
 
     def predict(self, inputs: np.matrix) -> np.matrix:
@@ -289,4 +282,22 @@ def calculate_total_error(target_output: np.matrix, output_nn: np.matrix) -> np.
 
     error_vector = np.sum(np.square(target_output - output_nn), axis=1)
     error_total = np.sum(error_vector)
+    return error_total
+
+def mean_squared_error(target_output: np.matrix, output_nn: np.matrix) -> np.float64:
+    """
+    :param target_output: matrice dell'output desiderato (dimensione: num_samples x num_output_neurons)
+    :param output_nn: matrice dell'output della rete neurale (dimensione: num_samples x num_output_neurons)
+
+    :return: errore quadratico medio
+    """
+    if target_output is None:
+        raise ValueError("target_output must be != None")
+    if output_nn is None:
+        raise ValueError("output_nn must be != None")
+    if target_output.shape != output_nn.shape:
+        raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
+
+    error_vector = np.sum(np.square(target_output - output_nn), axis=1)
+    error_total = np.mean(error_vector)
     return error_total
