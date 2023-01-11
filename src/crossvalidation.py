@@ -4,9 +4,9 @@ This library will contain our model selection and assessment algorithms.
 
 """
 import math
-
+import itertools
 import numpy as np
-
+import multiprocessing
 
 def _k_fold_partitioning(target_inputs: np.matrix, target_outputs: np.matrix, k: int, fold_index: int) -> (
 np.matrix, np.matrix, np.matrix, np.matrix):
@@ -68,7 +68,7 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
     return error / k
 
 
-def grid_search(model, parameters_grid: dict, **kwargs) -> dict:
+def grid_search(model, parameters_grid: dict, target_inputs, target_outputs) -> dict:
     """
     Grid search algorithm, GS has complexity O(n^d)
     where n is the number of parameters and d the number of values for each parameter.
@@ -87,11 +87,14 @@ def grid_search(model, parameters_grid: dict, **kwargs) -> dict:
     :param kwargs: optional parameters for the future hyperparameters
     :return: the best parameters
     """
-
+    # num folds
+    k = 5
     best_parameters = None
     best_error = float('inf')
+    parameters_grid = list(itertools.product(*parameters_grid.values()))
+    
     for parameters_set in parameters_grid:
-        error = _cross_validation(target_inputs, target_outputs, k, model, **parameters_set)
+        error = _cross_validation(target_inputs, target_outputs, k, model, parameters_set)
         if error < best_error:
             best_error = error
             best_parameters = parameters_set
