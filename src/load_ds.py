@@ -33,30 +33,29 @@ In the csv we have the index of the sample, the inputs and the target values:
 ...
 
 """
+from random import random
+
 import numpy
 import pandas as pd
 import numpy as np
-import random
 
-def load_monks(directory, shuffle: False):
+
+def load_monks(directory, shuffle=False):
     monks_ds = pd.read_csv(directory, sep = ' ', header=None)
     monks_ds = monks_ds.drop(monks_ds.columns[0], axis=1) # La prima colonna contiene solo valori NaN
     monks_ds = monks_ds.drop(monks_ds.columns[-1], axis=1) # L'ultima colonna contiene l'id -> non ci serve
 
+    if shuffle:
+        monks_ds = monks_ds.sample(frac=1).reset_index(drop=True)
+
     target_input = monks_ds.drop(monks_ds.columns[0], axis=1)
     target_output = monks_ds.iloc[:, 0]
 
-    # Shuffle the dataset
-    if shuffle:
-        indices = np.arange(target_input.shape[0])
-        random.shuffle(indices) 
-        target_input = target_input.iloc[indices, :]
-    
     # One-hot encode the categorical attributes
     target_input = pd.get_dummies(target_input, columns=[2,3,4,5,6,7])
 
     target_input = np.matrix(target_input)
-    target_output = np.matrix(target_output).reshape(124, 1)
+    target_output = np.matrix(target_output).reshape(len(monks_ds), 1)
 
     return target_input, target_output
 
@@ -69,7 +68,7 @@ def data_set_partitioning(target_inputs: numpy.matrix, target_outputs: numpy.mat
     :param percentage_training_set: percentuale di dati da usare per il training set
     :return: dizionario con i dati di training e validation
     """
-    
+
     len_training_set = (percentage_training_set / target_inputs.shape[0]) * 100
     len_training_set = round(len_training_set)
 
