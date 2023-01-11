@@ -1,5 +1,5 @@
 import multiprocessing
-
+import itertools
 
 def grid_search(parameters_grid, target_inputs, target_outputs):
     """
@@ -22,18 +22,36 @@ def grid_search(parameters_grid, target_inputs, target_outputs):
     error_queue = multiprocessing.Queue()
 
     process_list = []
-
-    # Loop over the different hyperparameters
-    for model in parameters_grid['model']:
-        for learning_rate in parameters_grid['learning_rate']:
-            for momentum_term in parameters_grid['momentum_term']:
-                for regularization_term in parameters_grid['regularization_term']:
-                    for epochs in parameters_grid['epochs']:
-                        # Definizione del task
-                        args = [model, target_inputs, target_outputs, learning_rate,
-                                epochs, regularization_term, momentum_term, error_queue]
-                        process = multiprocessing.Process(target=_training, args=args)
-                        process_list.append(process)
+   
+    # Remove the model from the parameters grid and create a dictionary with only models
+    models = {}
+    models = parameters_grid.pop('model')
+    
+    # Combination of hyperparameters excluding the model
+    combination_grid = list(itertools.product(*parameters_grid.values()))
+    
+    """
+        # Loop over the different hyperparameters
+        for model in parameters_grid['model']:
+            for learning_rate in parameters_grid['learning_rate']:
+                for momentum_term in parameters_grid['momentum_term']:
+                    for regularization_term in parameters_grid['regularization_term']:
+                        for epochs in parameters_grid['epochs']:
+                            # Definizione del task
+                            args = [model, target_inputs, target_outputs, learning_rate,
+                                    epochs, regularization_term, momentum_term, error_queue]
+                            process = multiprocessing.Process(target=_training, args=args)
+                            process_list.append(process)
+    """
+    for model in models:
+        for parameters_set in combination_grid:
+            
+            learning_rate, momentum_term, regularization_term, epochs = parameters_set
+            
+            args = [model, target_inputs, target_outputs, learning_rate, 
+                    epochs, regularization_term, momentum_term, error_queue]
+            process = multiprocessing.Process(target=_training, args=args)
+            process_list.append(process)
 
     for process in process_list:
         process.start()
