@@ -33,14 +33,20 @@ In the csv we have the index of the sample, the inputs and the target values:
 ...
 
 """
-from random import random
-
 import numpy
 import pandas as pd
 import numpy as np
 
 
 def load_monks(directory, shuffle=False):
+    """
+    Restituisce il dataset MONK (suddiviso in target_input e target_output)
+    sotto forma di matrice dopo aver applicato One-hot encoding all'input
+
+    :param directory: directory del dataset
+    :param shuffle: se True, fa il shuffle del dataset
+    """
+
     monks_ds = pd.read_csv(directory, sep = ' ', header=None)
     monks_ds = monks_ds.drop(monks_ds.columns[0], axis=1) # La prima colonna contiene solo valori NaN
     monks_ds = monks_ds.drop(monks_ds.columns[-1], axis=1) # L'ultima colonna contiene l'id -> non ci serve
@@ -56,6 +62,28 @@ def load_monks(directory, shuffle=False):
 
     target_input = np.matrix(target_input)
     target_output = np.matrix(target_output).reshape(len(monks_ds), 1)
+
+    return target_input, target_output
+
+def load_cup_training(directory = '../datasets/CUP/ML-CUP22-TR.csv', shuffle=False):
+    """
+    Restituisce il dataset CUP sotto forma di matrice(suddiviso in target_input e target_output)
+
+    :param directory: directory del dataset ML-CUP22-TR.csv
+    :param shuffle: se True, fa il shuffle del dataset
+    """
+
+    cup_ds = pd.read_csv(directory, comment='#', header=None)
+    cup_ds = cup_ds.drop(cup_ds.columns[0], axis=1) # prima colonna contiene l'id -> non ci serve
+
+    if shuffle:
+        cup_ds = cup_ds.sample(frac=1).reset_index(drop=True)
+
+    target_input = cup_ds.iloc[:, :9]  # prende le prime 9 colonne
+    target_output = cup_ds.iloc[:, -2:]  # prende le ultime 2 colonne
+
+    target_input = np.matrix(target_input)
+    target_output = np.matrix(target_output)
 
     return target_input, target_output
 
