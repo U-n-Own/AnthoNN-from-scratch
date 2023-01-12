@@ -43,7 +43,7 @@ np.matrix, np.matrix, np.matrix, np.matrix):
     return training_inputs, training_outputs, validation_inputs, validation_outputs
 
 
-def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: int, model, parameters_set) -> float:
+def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: int, model, parameters_set, error_queue):
     """
     Cross validation algorithm using k folds
 
@@ -61,11 +61,14 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
                                                                                                        target_outputs,
                                                                                                        k, i)
         epochs, learning_rate, momentum_term, regularization_term = parameters_set
-        model.train(training_inputs, training_outputs, epochs, learning_rate, momentum_term, regularization_term)
+        error_list = model.train(training_inputs, training_outputs, epochs, learning_rate, momentum_term, regularization_term)
         # TODO Check implementation of validate error function
         error += model.validate(validation_inputs, validation_outputs)
 
-    return error / k
+    parameters_set = (epochs, learning_rate, momentum_term, regularization_term)
+    error_queue.put((error / k, parameters_set))
+
+    #return error / k
 
 
 def grid_search(model, parameters_grid: dict, target_inputs, target_outputs) -> dict:
@@ -93,10 +96,31 @@ def grid_search(model, parameters_grid: dict, target_inputs, target_outputs) -> 
     best_error = float('inf')
     parameters_grid = list(itertools.product(*parameters_grid.values()))
     
+    error_queue = multiprocessing.Queue()
+    process_list = []
+    models_error_list = []
+    
     for parameters_set in parameters_grid:
-        error = _cross_validation(target_inputs, target_outputs, k, model, parameters_set)
-        if error < best_error:
-            best_error = error
-            best_parameters = parameters_set
-
-    return best_parameters
+        
+        process = multiprocessing.Process(target=_cross_validation, args=(target_inputs, target_outputs, k, model, parameters_set, error_queue))
+        process_list.append(process)
+        
+        #error = _cross_validation(target_inputs, target_outputs, k, model, parameters_set)
+        
+    for process in process_list:
+        process.start()
+        print("Process {} started".format(process.pid))
+    for process in process_list:
+        process.join()
+        print("Process ", process.pid, " terminated")
+        
+    # error_queue has a tuple of (error, parameters_set)
+    # extract best error and best_parameters
+    while not error_queue.empty():
+        error = error_queue.get()
+        if error[0] < best_error:
+            best_error = error[0]
+            best_parameters = error[1]
+    
+    return best_parameters, best_error
+        
