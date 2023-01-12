@@ -96,6 +96,20 @@ class NeuralNetwork:
         self.layers = layers
         self.error = error
 
+    def get_weights(self):
+        """ Method used to save final weights of our model 
+        
+        :return: list of weights of each layer in dictionary form
+        """ 
+        weights = {}
+        current_layer_weights = []
+            
+        for layer in self.layers:
+            current_layer_weights.append(layer.weights)
+            weights.update({layer: current_layer_weights})
+            
+        return weights
+            
     def validate(self, validation_inputs, validation_outputs) -> float:
         """ Evaluating the network error on validation data """
 
