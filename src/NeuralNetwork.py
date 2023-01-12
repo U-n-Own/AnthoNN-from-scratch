@@ -1,8 +1,8 @@
 from typing import List
 import numpy as np
 
+from src.error import Error, MeanSquaredError
 from src.function import ActivationFunction
-
 
 class Layer:
     """
@@ -79,25 +79,28 @@ class Layer:
 
 class NeuralNetwork:
     layers: List[Layer] = []
+    error: Error
 
-    def __init__(self, layers: [Layer]):
+    def __init__(self, layers: [Layer], error: Error = MeanSquaredError()):
         if layers is None:
             raise ValueError("layers must be != None")
         if len(layers) == 0:
             raise ValueError("layers must be not empty")
-
+        if error is None:
+            raise ValueError("error must be != None")
         # Controllo che il numero d'input del layer i-esimo sia uguale al numero di neuroni del layer precedente
         for i in range(1, len(layers)):
             if layers[i].num_inputs != layers[i - 1].num_neurons:
                 raise ValueError(f"layers[i].num_inputs ({layers[i].num_inputs})  must be == layers[i-1].num_neurons ({layers[i-1].num_neurons})")
 
         self.layers = layers
+        self.error = error
 
     def validate(self, validation_inputs, validation_outputs) -> float:
         """ Evaluating the network error on validation data """
 
         predicted_outputs = self.predict(validation_inputs)
-        validation_error = calculate_total_error(validation_outputs, predicted_outputs)
+        validation_error = self.error.calculate_total_error(validation_outputs, predicted_outputs)
 
         return validation_error
 
@@ -130,7 +133,7 @@ class NeuralNetwork:
             :target_outputs: matrice(num_samples, num_neuroni_ultimo_layer)
             :epochs: numero di iterazioni dell'algoritmo di backpropagation
 
-            :return: lista di errori. L'i-esimo elemento contiene l'errore dell'i-esimo epoch. L'errore viene calcolato con calculate_total_error
+            :return: lista di errori. L'i-esimo elemento contiene l'errore dell'i-esimo epoch. L'errore viene calcolato con mean_squared_error
         """
         if target_inputs is None:
             raise ValueError("inputs must be != None")
@@ -169,7 +172,8 @@ class NeuralNetwork:
                     layer.biases = layer.biases + learning_rate*layer.current_delta_bias
 
                 output_nn = self.predict(inputs=target_inputs)
-                error_history.append(calculate_total_error(target_output=target_outputs, output_nn=output_nn))
+                total_error = self.error.calculate_total_error(target_outputs, output_nn)
+                error_history.append(total_error)
 
         except OverflowError:
             raise OverflowError("Errore di overflow durante il training")
@@ -262,42 +266,3 @@ class NeuralNetwork:
         delta_weight = np.outer(delta_error, outputs_previous_layer)
 
         return delta_error, delta_weight
-
-
-def calculate_total_error(target_output: np.matrix, output_nn: np.matrix) -> np.float64:
-    """
-    implementazione dell'errore spiegato a lezione: https://www.notion.so/Back-propagation-c35b14a0570246ebaf5f82722a0cb8a3#3bbf8fb43aa94a0a98d29d80076d79e3
-
-    :param target_output: matrice dell'output desiderato (dimensione: num_samples x num_output_neurons)
-    :param output_nn: matrice dell'output della rete neurale (dimensione: num_samples x num_output_neurons)
-
-    :return: errore totale
-    """
-    if target_output is None:
-        raise ValueError("target_output must be != None")
-    if output_nn is None:
-        raise ValueError("output_nn must be != None")
-    if target_output.shape != output_nn.shape:
-        raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
-
-    error_vector = np.sum(np.square(target_output - output_nn), axis=1)
-    error_total = np.sum(error_vector)
-    return error_total
-
-def mean_squared_error(target_output: np.matrix, output_nn: np.matrix) -> np.float64:
-    """
-    :param target_output: matrice dell'output desiderato (dimensione: num_samples x num_output_neurons)
-    :param output_nn: matrice dell'output della rete neurale (dimensione: num_samples x num_output_neurons)
-
-    :return: errore quadratico medio
-    """
-    if target_output is None:
-        raise ValueError("target_output must be != None")
-    if output_nn is None:
-        raise ValueError("output_nn must be != None")
-    if target_output.shape != output_nn.shape:
-        raise ValueError(f"target_output ({target_output.shape}) and output_nn ({output_nn.shape}) must have the same shape")
-
-    error_vector = np.sum(np.square(target_output - output_nn), axis=1)
-    error_total = np.mean(error_vector)
-    return error_total
