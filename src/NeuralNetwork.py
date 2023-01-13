@@ -100,6 +100,7 @@ class NeuralNetwork:
 
     def get_weights(self):
         # TODO controllare se fa una shallow copy
+        # TODO save weights in a file for later use
         """ Method used to save final weights of our model
 
         :return: list of weights of each layer in dictionary form
@@ -113,6 +114,17 @@ class NeuralNetwork:
 
         return weights
 
+    def set_weights(self, weights: dict):
+        """ Method used to set/load weights of our trained model """
+        
+        # Check if number of layer of current net is equal to the number of layer we have in the dictionary
+        if len(self.layers) != len(weights):
+            raise ValueError(f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded weights ({len(weights)})")
+        
+        for layer in self.layers:
+            layer.weights = weights[layer]
+        
+    
     def validate(self, validation_inputs: np.matrix, validation_outputs: np.matrix) -> float:
         # TODO controllo argomenti
         """ Evaluating the network error on validation data """
