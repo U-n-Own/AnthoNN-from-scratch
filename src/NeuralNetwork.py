@@ -1,8 +1,8 @@
 from typing import List
 import numpy as np
 
-from src.neuralNetwork.error import Error, MeanSquaredError
-from src.neuralNetwork.function import ActivationFunction
+from src.error import Error, MeanSquaredError
+from src.function import ActivationFunction
 
 
 class Layer:
@@ -98,7 +98,7 @@ class NeuralNetwork:
         self.layers = layers
         self.error = error
 
-    def get_weights(self):
+    def get_weights_and_biases(self):
         # TODO controllare se fa una shallow copy
         # TODO save weights in a file for later use
         """ Method used to save final weights of our model
@@ -106,23 +106,32 @@ class NeuralNetwork:
         :return: list of weights of each layer in dictionary form
         """
         weights = {}
+        biases = {}
         current_layer_weights = []
-
+        current_layer_biases = []
+        
         for layer in self.layers:
             current_layer_weights.append(layer.weights)
+            current_layer_biases.append(layer.biases)
             weights.update({layer: current_layer_weights})
-
-        return weights
-
-    def set_weights(self, weights: dict):
-        """ Method used to set/load weights of our trained model """
+            biases.update({layer: current_layer_biases})
         
+        return weights, biases
+
+    def set_weights_and_biases(self, weights: dict, biases: dict):
+        """ Method used to set/load weights of our trained model """
+        # TODO Check if weights and biases are equal after the set
         # Check if number of layer of current net is equal to the number of layer we have in the dictionary
         if len(self.layers) != len(weights):
             raise ValueError(f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded weights ({len(weights)})")
+        if len(self.layers) != len(biases):
+            raise ValueError(f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded biases ({len(biases)})")
+        
         
         for layer in self.layers:
+            # Overwrite weights and biases of each layer
             layer.weights = weights[layer]
+            layer.biases = biases[layer] 
         
     
     def validate(self, validation_inputs: np.matrix, validation_outputs: np.matrix) -> float:
