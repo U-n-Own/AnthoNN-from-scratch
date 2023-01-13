@@ -8,6 +8,14 @@ import itertools
 import numpy as np
 import multiprocessing
 
+
+def retrain(self, best_model, best_parameters, target_inputs, target_outputs):
+    """ Final retrain the best network after cross-validation process """
+    
+    epochs, learning_rate, momentum_term, regularization_term = best_parameters
+    model.train(target_inputs=target_inputs, target_outputs=target_outputs, epochs=epochs, learning_rate=learning_rate,
+                momentum_term = momentum_term, regularization_term=regularization_term)
+
 def _k_fold_partitioning(target_inputs: np.matrix, target_outputs: np.matrix, k: int, fold_index: int) -> (
 np.matrix, np.matrix, np.matrix, np.matrix):
     """
