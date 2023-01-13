@@ -37,7 +37,6 @@ import numpy
 import pandas as pd
 import numpy as np
 
-
 def load_monks(directory, shuffle=False):
     """
     Restituisce il dataset MONK (suddiviso in target_input e target_output)
@@ -87,27 +86,53 @@ def load_cup_training(directory = '../datasets/CUP/ML-CUP22-TR.csv', shuffle=Fal
 
     return target_input, target_output
 
+def load_matrix(directory):
+    """
+    Restitusce le matrice di input e output salvate in "directory"
+
+    :param directory: directory dove sono salvate le matrici per il model_assessment e model_selection
+    """
+
+    target_inputs = np.load(f"{directory}/target_inputs.npy")
+    target_inputs = np.matrix(target_inputs)
+
+    target_outputs = np.load(f"{directory}/target_outputs.npy")
+    target_outputs = np.matrix(target_outputs)
+
+    return target_inputs, target_outputs
+
+
 def data_set_partitioning(target_inputs: numpy.matrix, target_outputs: numpy.matrix, percentage_training_set: int) -> dict:
     """
-    Partizione del dataset in training set e validation set
+    Partizione del dataset in model_selection set e validation set
 
     :param target_inputs: matrice contenente gli input
     :param target_outputs: matrice contenente gli output
-    :param percentage_training_set: percentuale di dati da usare per il training set
-    :return: dizionario con i dati di training e validation
+    :param percentage_training_set: percentuale di dati da usare per il model_selection set
+    :return: dizionario con i dati di model_selection e validation
     """
 
-    len_training_set = (percentage_training_set / target_inputs.shape[0]) * 100
+    len_training_set = (percentage_training_set*target_inputs.shape[0]) / 100
     len_training_set = round(len_training_set)
+    len_validation_set = target_inputs.shape[0] - len_training_set
 
-    target_inputs_training = target_inputs[:len_training_set]
-    target_inputs_validation = target_inputs[len_training_set:]
+    target_inputs_training = target_inputs[:len_training_set, :]
+    target_inputs_validation = target_inputs[-len_validation_set:, :]
 
-    target_outputs_training = target_outputs[:len_training_set]
-    target_outputs_validation = target_outputs[len_training_set:]
+    target_outputs_training = target_outputs[:len_training_set, :]
+    target_outputs_validation = target_outputs[-len_validation_set:, :]
+
+    assert target_inputs_training.shape[0] == target_outputs_training.shape[0]
+    assert target_inputs_validation.shape[0] == target_outputs_validation.shape[0]
+
+    assert target_inputs_training.shape[1] == target_inputs_validation.shape[1]
+    assert target_outputs_training.shape[1] == target_outputs_validation.shape[1]
+
+    assert target_inputs_training.shape[0] + target_inputs_validation.shape[0] == target_inputs.shape[0]
+    assert target_outputs_training.shape[0] + target_outputs_validation.shape[0] == target_outputs.shape[0]
 
     return {
-        'training': {
+        'model_selection': {
             'inputs': target_inputs_training,
             'outputs': target_outputs_training
         },
