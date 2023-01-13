@@ -75,9 +75,10 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
                                                                                                        target_outputs,
                                                                                                        k, i)
 
-        model.train(target_inputs = training_inputs, target_outputs = training_outputs,
-                                     epochs=epochs, learning_rate=learning_rate, momentum_term=momentum_term,
-                                     regularization_term=regularization_term)
+        model.train(target_inputs_training = training_inputs, target_outputs_training = training_outputs,
+                    target_inputs_validation=validation_inputs, target_outputs_validation=validation_outputs,
+                    epochs=epochs, learning_rate=learning_rate, momentum_term=momentum_term,
+                    regularization_term=regularization_term)
         error += model.validate(validation_inputs, validation_outputs)
 
     parameters_set = (epochs, learning_rate, momentum_term, regularization_term)
