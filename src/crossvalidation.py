@@ -149,3 +149,63 @@ def grid_search(parameters_grid: dict, target_inputs: np.matrix, target_outputs:
         'error_list': error_list,
         'parameters_list': parameters_list
     }
+    
+def nested_grid_search(external_parameters_grid: dict, target_inputs: np.matrix, target_outputs: np.matrix, k: int = 5):
+    """ Nested grid search algorithm uses a first grid to search for the best model structure 
+    (number of hidden layers, activation function, number of neurons per hidden layer),
+    then we pick the best model and a second grid for hyperparameters search.
+    
+    @Current implementation
+    Alternatively we can find trought an external search the best model structure and then tune hyperparameters
+    with the nested grid search, the approach would be: use a first grid to determine a bound for the values in the grid
+    then we use the second grid to get a better estimate for the hyperparameters.   
+    """
+    
+    # External grid search
+    best_error, best_parameters = grid_search(external_parameters_grid, target_inputs, target_outputs)
+    
+    # Use the first grid with the best_parameters to build the nested grid
+    # From best parameters take a strict subset of parameters 
+
+    # Unpack best_parameters
+    epochs, learning_rate, momentum_term, regularization_term = best_parameters
+    
+    internal_parameters_grid = _build_internal_grid(external_parameters_grid, best_parameters)
+    
+    
+def _build_internal_grid(external_parameters_grid: dict, best_parameters: dict):
+    # FIXME : Currently returns empty grid
+    """ Build the internal grid for the nested grid search.
+    Cycle on the external parameters grid and see 
+    if parmeters in best_parameters is at the "edge" of the grid
+    create a new grid with a strict subset of parameters
+    """
+    internal_parameters_grid = {'epochs':[],
+                                'learning_rate':[],
+                                'momentum_term':[],
+                                'regularization_term':[]
+                                }
+    
+    for key, value in external_parameters_grid.items():
+        
+        print("Current parameter: ", key, " with values: ", value, " and best value: ", best_parameters[key], "")
+        
+        if key == 'epochs':
+            print("Epochs best", best_parameters[key])
+            if best_parameters[key] == value[0]:
+                # Change epoch values key in internal_parameters_grid
+                internal_parameters_grid[key] = [value[0], value[0]*2, value[0]*3]
+            elif best_parameters[key] == value[-1]:
+                internal_parameters_grid[key] = [value[-1]/3, value[-1]/2, value[-1]]
+            
+        if best_parameters[key] == value[0]:
+            print("Best parameter is the smallest value")
+            # Parameter is the smallest value
+            # New values will be 10^(-1) and 10^(-2) of the best_parameter and the best_parameter
+            internal_parameters_grid[key] = [value[0]/10, value[0]/100, value[0]] 
+        elif best_parameters[key] == value[-1]:
+            print("Best parameter is the biggest value")
+            # Parameter is the biggest value
+            internal_parameters_grid[key] = [value[-1], value[-1]*10, value[-1]*100]
+    
+    return internal_parameters_grid
