@@ -21,6 +21,12 @@ class MeanSquaredError(Error):
         error_total = np.mean(error_vector)
         return error_total
 
+class MeanAbsoluteError(Error):
+    def calculate_total_error(self, target_output: np.matrix, output_nn: np.matrix) -> np.float64:
+        error_vector = np.sum(np.abs(target_output - output_nn), axis=1)
+        error_total = np.mean(error_vector)
+        return error_total
+
 
 class SquaredError(Error):
     def calculate_total_error(self, target_output: np.matrix, output_nn: np.matrix) -> np.float64:
