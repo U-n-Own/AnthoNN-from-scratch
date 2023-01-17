@@ -67,7 +67,8 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
 
     learning_rate, momentum_term, regularization_term, epochs = parameters_set
 
-    error = 0
+    training_error_history = np.zeros(epochs)
+    validation_error_history = np.zeros(epochs)
 
     for i in range(k):
         print("Fold ", i)
@@ -75,14 +76,17 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
                                                                                                        target_outputs,
                                                                                                        k, i)
 
-        model.train(target_inputs_training = training_inputs, target_outputs_training = training_outputs,
-                    target_inputs_validation=validation_inputs, target_outputs_validation=validation_outputs,
-                    epochs=epochs, learning_rate=learning_rate, momentum_term=momentum_term,
-                    regularization_term=regularization_term)
-        error += model.validate(validation_inputs, validation_outputs)
+        training_error_history_fold, validation_error_history_fold = model.train(
+            target_inputs_training = training_inputs, target_outputs_training = training_outputs,
+            target_inputs_validation=validation_inputs, target_outputs_validation=validation_outputs,
+            epochs=epochs, learning_rate=learning_rate, momentum_term=momentum_term,
+            regularization_term=regularization_term)
+
+        training_error_history += training_error_history_fold
+        validation_error_history += validation_error_history_fold
 
     parameters_set = (epochs, learning_rate, momentum_term, regularization_term)
-    error_queue.put((error / k, parameters_set))
+    error_queue.put((training_error_history/k, validation_error_history/k, parameters_set))
 
 
 def grid_search(parameters_grid: dict, target_inputs: np.matrix, target_outputs: np.matrix, k: int = 5):
@@ -132,20 +136,26 @@ def grid_search(parameters_grid: dict, target_inputs: np.matrix, target_outputs:
 
     # error_queue has a tuple of (error, parameters_set)
     # extract best error and best_parameters
-    error_list = []
     parameters_list = []
+    training_error_history_list = []
+    validation_error_history_list = []
+    best_validation_error = None
+
     while not error_queue.empty():
         error = error_queue.get()
-        error_list.append(error[0])
-        parameters_list.append(error[1])
+        training_error_history_list.append(error[0])
+        validation_error_history_list.append(error[1])
+        parameters_list.append(error[2])
 
-        if best_error is None or error[0] < best_error:
-            best_error = error[0]
-            best_parameters = error[1]
+        if best_error is None or error[0][-1] < best_error:
+            best_validation_error = error[0][-1]
+            best_parameters = error[2]
 
     return {
         'best_error': best_error,
         'best_parameters': best_parameters,
-        'error_list': error_list,
+        'training_error_history_list': training_error_history_list,
+        'validation_error_history_list': validation_error_history_list,
+        'best_validation_error': best_validation_error,
         'parameters_list': parameters_list
     }
