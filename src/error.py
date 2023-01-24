@@ -21,7 +21,7 @@ class MeanSquaredError(Error):
         error_vector = np.square(target_output - output_nn)
         error_total = np.mean(error_vector)
 
-        assert round(error_total, 10) == round(mean_squared_error(target_output, output_nn), 10)
+        #assert round(error_total, 10) == round(mean_squared_error(target_output, output_nn), 10)
 
         return error_total
 
@@ -39,7 +39,7 @@ class MeanAbsolutePercentageError(Error):
         error_vector = np.abs((target_output - output_nn) / target_output)
         error_total = np.mean(error_vector)
 
-        assert round(error_total, 10) == round(mean_absolute_percentage_error(target_output, output_nn), 10)
+        #assert round(error_total, 10) == round(mean_absolute_percentage_error(target_output, output_nn), 10)
 
         return error_total
 

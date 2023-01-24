@@ -10,7 +10,7 @@ import multiprocessing
 
 from matplotlib import pyplot as plt
 
-from src.neuralNetwork.NeuralNetwork import NeuralNetwork
+from src.NeuralNetwork import NeuralNetwork
 from src.crossvalidation import _k_fold_partitioning
 
 
