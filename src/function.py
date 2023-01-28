@@ -74,3 +74,14 @@ class SoftplusFunction(ActivationFunction):
 
     def derivative(self, x: float)-> float:
         return np.exp(x) / (np.exp(x)+1)
+
+class SoftmaxFunction(ActivationFunction):
+    """
+    Usually softmax is used for output unit in classification task to trasform the outputs into probabilities.
+    This may be probabilities for classify a certain image into the class we want.
+    """
+    def output(self, x: float) -> float:
+        return np.exp(x) / np.sum(np.exp(x))
+    
+    def derivative(self, x: float) -> float:
+        return self.output(x) * (1 - self.output(x))
