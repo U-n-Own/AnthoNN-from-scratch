@@ -1,2 +1,4 @@
 notebooks/** linguist-vendored
 test/** linguist-vendored
+cup/** linguist-vendored
+biasVariance/** linguist-vendored
