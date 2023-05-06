@@ -3,12 +3,11 @@
 This library will contain our model selection and assessment algorithms.
 
 """
-import math
 import itertools
 import numpy as np
 import multiprocessing
-
 from src.neuralNetwork.NeuralNetwork import NeuralNetwork
+
 
 def retrain(self, best_model, best_parameters, target_inputs, target_outputs):
     """ Final retrain the best network after cross-validation process """
@@ -110,7 +109,6 @@ def grid_search(parameters_grid: dict, target_inputs: np.matrix, target_outputs:
     :return: the best parameters
     """
     best_parameters = None
-    best_error = None
 
     error_queue = multiprocessing.Queue()
     process_list = []
@@ -145,15 +143,14 @@ def grid_search(parameters_grid: dict, target_inputs: np.matrix, target_outputs:
         validation_error_history_list.append(error[1])
         parameters_list.append(error[2])
 
-        if best_error is None or error[0][-1] < best_error:
+        if best_validation_error is None or error[1][-1] < best_validation_error:
             best_validation_error = error[0][-1]
             best_parameters = error[2]
 
     return {
-        'best_error': best_error,
+        'best_validation_error': best_validation_error,
         'best_parameters': best_parameters,
         'training_error_history_list': training_error_history_list,
         'validation_error_history_list': validation_error_history_list,
-        'best_validation_error': best_validation_error,
         'parameters_list': parameters_list
     }
