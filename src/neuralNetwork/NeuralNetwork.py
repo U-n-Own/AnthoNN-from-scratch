@@ -1,84 +1,16 @@
 from typing import List
+
 import numpy as np
 
-from src.error import Error, MeanSquaredError
-from src.function import ActivationFunction
-
-
-class Layer:
-    """
-        N.B. l'input non viene considerato come layer
-    """
-    num_neurons: int = 0  # numero di neuroni del layer precedente
-    num_inputs: int = 0  # numero di input del layer (i.e. numero di neuroni del layer precedente)
-
-    weights: np.matrix  # matrice
-    biases: np.ndarray  # vettore
-
-    previous_delta_weight: np.matrix = None  # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch precedente. Usato per applicare il momentum (N.B. non contiene il learning rate)
-    current_delta_weight: np.matrix = None  # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch corrente. Usato per applicare il momentum (N.B. non contiene il learning rate)
-
-    current_delta_bias: np.ndarray = None
-
-    net: np.ndarray = None  # matrice (num_neurons x 1)
-    output: np.ndarray = None  # matrice (num_neurons x 1)
-
-    activation_function: ActivationFunction
-
-    def __init__(self, num_neurons: int, num_inputs: int,
-                 activation_function: ActivationFunction,
-                 min_value_weight=-0.03, max_value_weight=0.2,
-                 min_value_bias=-0.01, max_value_bias=0.2):
-        """
-        :param num_neurons: numero di neuroni del layer
-        :param num_inputs: numero input di ogni unit (i.e. Numero di neuroni del layer precedente)
-        """
-
-        if num_neurons <= 0:
-            raise ValueError("num_neurons must be > 0")
-        if num_inputs <= 0:
-            raise ValueError("num_inputs must be > 0")
-        if activation_function is None:
-            raise ValueError("activation_function must be != None")
-        if min_value_weight > max_value_weight:
-            raise ValueError(f"min_value_weight must be ({min_value_weight}) <= max_value_weight ({min_value_weight})")
-        if min_value_bias > max_value_bias:
-            raise ValueError(f"min_value_bias must be ({min_value_bias}) <= max_value_bias ({max_value_bias}) ")
-
-        self.num_neurons = num_neurons
-        self.num_inputs = num_inputs
-
-        self.activation_function = activation_function
-
-        # set random biases and weights
-        self.biases = np.matrix(np.random.uniform(low=min_value_bias, high=max_value_bias, size=(1, num_neurons)))
-        self.weights = np.matrix(
-            np.random.uniform(low=min_value_weight, high=max_value_weight, size=(num_neurons, num_inputs)))
-
-        self.previous_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
-        self.current_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs)))
-        self.current_delta_bias = np.matrix(np.zeros((1, num_neurons)))
-
-    def calculate_outputs(self, inputs: np.matrix) -> np.matrix:
-        """
-        calcola l'output del layer dato inputs
-        :param inputs: matrice di inputs (dimensione: num_samples x num_features)
-        :return: matrice di output (dimensione: num_samples x num_output_neurons)
-        (spiegazione grafica: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#b7fb73f5f1ac43deb096fd64f968c540)
-
-        """
-
-        if inputs is None:
-            raise ValueError("inputs must be != None")
-        if inputs.shape[1] != self.num_inputs:
-            raise ValueError(f"inputs.shape[1] ({inputs.shape[1]}) must be == self.num_inputs ({self.num_inputs})")
-
-        self.net = inputs * self.weights.T + self.biases
-        self.output = np.vectorize(self.activation_function.output)(self.net)
-        return self.output
+from src.neuralNetwork.Layer import Layer
+from src.neuralNetwork.error import Error, MeanSquaredError
 
 
 class NeuralNetwork:
+    """
+    Documentazione: https://www.notion.so/Documentazione-codice-bb9e8289652d4fff9faa71d0ef93afba
+    """
+
     layers: List[Layer] = []
     error: Error
 
@@ -109,13 +41,13 @@ class NeuralNetwork:
         biases = {}
         current_layer_weights = []
         current_layer_biases = []
-        
+
         for layer in self.layers:
             current_layer_weights.append(layer.weights)
             current_layer_biases.append(layer.biases)
             weights.update({layer: current_layer_weights})
             biases.update({layer: current_layer_biases})
-        
+
         return weights, biases
 
     def set_weights_and_biases(self, weights: dict, biases: dict):
@@ -123,17 +55,17 @@ class NeuralNetwork:
         # TODO Check if weights and biases are equal after the set
         # Check if number of layer of current net is equal to the number of layer we have in the dictionary
         if len(self.layers) != len(weights):
-            raise ValueError(f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded weights ({len(weights)})")
+            raise ValueError(
+                f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded weights ({len(weights)})")
         if len(self.layers) != len(biases):
-            raise ValueError(f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded biases ({len(biases)})")
-        
-        
+            raise ValueError(
+                f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded biases ({len(biases)})")
+
         for layer in self.layers:
             # Overwrite weights and biases of each layer
             layer.weights = weights[layer]
-            layer.biases = biases[layer] 
-        
-    
+            layer.biases = biases[layer]
+
     def validate(self, validation_inputs: np.matrix, validation_outputs: np.matrix) -> float:
         # TODO controllo argomenti
         """ Evaluating the network error on validation data """
@@ -149,7 +81,6 @@ class NeuralNetwork:
 
         :param inputs: matrice di inputs (dimensione: num_samples x num_features)
         :return: matrice di output (dimensione: num_samples x num_output_neurons)
-        (spiegazione grafica: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#b7fb73f5f1ac43deb096fd64f968c540)
         """
 
         if inputs is None:
@@ -159,8 +90,7 @@ class NeuralNetwork:
                              f"essere uguale al numero di input accettati dalla rete neurale ({self.layers[0].num_inputs})")
 
         for layer in self.layers:
-            outputs = layer.calculate_outputs(inputs)
-            inputs = outputs
+            inputs = layer.forward(inputs)
 
         return inputs
 
@@ -172,24 +102,26 @@ class NeuralNetwork:
 
             :target_inputs_training: matrice(num_samples, num_inputs_rete_neurale) di inputs per il training
             :target_outputs_training: matrice(num_samples, num_neuroni_ultimo_layer) di outputs per il training
-            :epochs: numero di iterazioni dell'algoritmo di backpropagation
+            :epochs: numero d'iterazioni dell'algoritmo di backpropagation
 
-            :return: lista di errori. L'i-esimo elemento contiene l'errore dell'i-esimo epoch. L'errore viene calcolato con mean_squared_error
+            :return: Lista di errori. L'i-esimo elemento contiene l'errore dell'i-esimo epoch.
         """
-        self._train_arguments_checking(target_inputs_training=target_inputs_training,
-                                       target_outputs_training=target_outputs_training,
-                                       learning_rate=learning_rate, epochs=epochs,
-                                       target_inputs_validation=target_inputs_validation,
-                                       target_outputs_validation=target_outputs_validation)
+        self._train_parameters_checking(target_inputs_training=target_inputs_training,
+                                        target_outputs_training=target_outputs_training,
+                                        learning_rate=learning_rate, epochs=epochs,
+                                        target_inputs_validation=target_inputs_validation,
+                                        target_outputs_validation=target_outputs_validation)
 
         training_error_history = []
         validation_error_history = []
 
-        for _ in range(epochs):
+        for epoch in range(epochs):
             self._training_on_epoch(target_inputs_training=target_inputs_training,
                                     target_outputs_training=target_outputs_training,
                                     learning_rate=learning_rate, regularization_term=regularization_term,
                                     momentum_term=momentum_term)
+
+            print(f"Epoch {epoch}/{epochs}: ", end = '')
 
             # Calcolo l'errore di training
             total_error_training = self.validate(validation_inputs=target_inputs_training,
@@ -202,16 +134,19 @@ class NeuralNetwork:
                                                        validation_outputs=target_outputs_validation)
                 validation_error_history.append(total_error_validation)
 
+                print(f"Training error: {total_error_training} - Validation error: {total_error_validation}")
+            else:
+                print(f"Training error: {total_error_training}")
+
 
         return training_error_history, validation_error_history
 
-    def _train_arguments_checking(self, target_inputs_training: np.matrix, target_outputs_training: np.matrix,
-                                  learning_rate: float, epochs,
-                                  target_inputs_validation: np.matrix, target_outputs_validation: np.matrix):
+    def _train_parameters_checking(self, target_inputs_training: np.matrix, target_outputs_training: np.matrix,
+                                   learning_rate: float, epochs,
+                                   target_inputs_validation: np.matrix, target_outputs_validation: np.matrix):
         """
         Funzione di supporto per la funzione train. Controlla che gli argomenti passati alla funzione train siano validi
         """
-
 
         if target_inputs_training is None:
             raise ValueError("inputs must be != None")
@@ -261,8 +196,9 @@ class NeuralNetwork:
 
         # Aggiorno i pesi e i bias
         for layer in self.layers:
+            # N.B.learning_rate obbligatorio anche per il momentum
             layer.weights = layer.weights + learning_rate * layer.current_delta_weight + \
-                            learning_rate * momentum_term * layer.previous_delta_weight - \
+                            momentum_term * learning_rate  * layer.previous_delta_weight - \
                             2 * regularization_term * layer.weights
             layer.biases = layer.biases + learning_rate * layer.current_delta_bias
 
@@ -280,38 +216,40 @@ class NeuralNetwork:
         self.layers[-1].current_delta_bias += delta_error
 
         # Backpropagation hidden layer
-        for i in range(len(self.layers) - 2, -1,
-                       -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
+        for i in range(len(self.layers) - 2, -1, -1):  # (scorre la lista in ordine inverso, dal penultimo al primo layer)
             delta_error, delta_weight = self._backpropagation_hidden_layer(i, target_input, delta_error)
             self.layers[i].current_delta_weight += delta_weight
             self.layers[i].current_delta_bias += delta_error
 
-    def _backpropagation_output_layer(self, target_input: np.matrix, target_output: np.matrix) -> (
-    np.matrix, np.matrix):
+    def _backpropagation_output_layer(self, target_input: np.matrix, target_output: np.matrix) -> (np.matrix, np.matrix):
         """
-            spiegazione: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#bd5c48fceacb464a81acda5ce37a2433
+            spiegazione: https://www.notion.so/Documentazione-codice-bb9e8289652d4fff9faa71d0ef93afba?pvs=4#b60b491c3af842c8b6fa2531c88b5112
 
             Applica algoritmo di backpropagation all'ultimo layer
             :target_input: matrice(1, num_inputs_rete_neurale)
             :target_output: matrice(1, num_neuroni_ultimo_layer)
 
             :return: delta_error, delta_weight
-            :delta_error matrice(1, num_neurons_ultimo layer). L'i-esimo elemento è il delta_error del i-esimo neurone.
+            :delta_error matrice(1, num_neurons_ultimo layer).
             :delta_weight matrice(num_neuroni_layer_precedente, num_neuroni_ultimo layer).
-                          L'i-esimo elemento è il delta_weight del i-esimo neurone
-                          (come indicato qui: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#91e92e1fbf8648b8880aadeb95c6770c)
         """
 
-        outputs = self.predict(target_input)
+        if target_input is None or target_output is None:
+            raise ValueError("inputs and outputs must be != None")
+        if target_input.shape[0] != 1 or target_output.shape[0] != 1:
+            raise ValueError("L'input e l'output della neural network devono contenere un solo sample")
+
+
+        nn_outputs = self.predict(target_input)
         output_layer = self.layers[-1]
+
+        derivative_vector = np.vectorize(output_layer.activation_function.derivative)(output_layer.net)
+        delta_error = np.multiply((target_output - nn_outputs), derivative_vector)  # np.multiply: element-wise product
 
         if len(self.layers) == 1:
             output_penultimate_layer = target_input
         else:
             output_penultimate_layer = self.layers[-2].output
-
-        derivative_vector = np.vectorize(output_layer.activation_function.derivative)(output_layer.net)
-        delta_error = np.multiply((target_output - outputs), derivative_vector)  # np.multiply: element-wise product
         delta_weight = np.outer(delta_error, output_penultimate_layer)
 
         return delta_error, delta_weight
@@ -319,7 +257,6 @@ class NeuralNetwork:
     def _backpropagation_hidden_layer(self, index_layer: int, target_input: np.matrix,
                                       delta_error_next_layer: np.matrix):
         """
-        Spiegazione: https://www.notion.so/Documentazione-codice-837f9c910a8447658ec6a565e3259d52#d86bff7059f0498397a8cdeae1c1631d
         :index_layer: indice del layer "corrente" (i.e. layer di cui aggiorniamo i weights)
         :target_input: matrice(1, num_inputs_rete_neurale)
         :delta_error_next_layer matrice(1, num_neuroni_layer_successivo). L'i-esimo elemento è il delta_error del i-esimo neurone.
@@ -327,25 +264,24 @@ class NeuralNetwork:
 
         if target_input is None:
             raise ValueError("inputs must be != None")
-        if target_input.shape != (1, self.layers[0].num_inputs):
-            raise ValueError(
-                f"inputs.shape ({target_input.shape}) deve essere uguale al numero di input accettati dalla rete neurale ({self.layers[0].num_inputs})")
+        if target_input.shape[0] != 1:
+            raise ValueError("L'input  della neural network deve contenere un solo sample")
         if delta_error_next_layer is None:
             raise ValueError("delta_error_next_layer must be != None")
         if delta_error_next_layer.shape != (1, self.layers[index_layer + 1].num_neurons):
-            raise ValueError(
-                f"delta_error_next_layer.shape ({delta_error_next_layer.shape}) deve essere uguale al numero di neuroni del layer successivo ({self.layers[-1].num_neurons})")
+            raise ValueError(f"delta_error_next_layer.shape ({delta_error_next_layer.shape}) deve essere "
+                             f"uguale al numero di neuroni del layer successivo ({self.layers[-1].num_neurons})")
 
         next_layer = self.layers[index_layer + 1]
         current_layer = self.layers[index_layer]
+
+        derivative_vector = np.vectorize(current_layer.activation_function.derivative)(current_layer.net)
+        delta_error = np.multiply((delta_error_next_layer * next_layer.weights), derivative_vector)  # np.multiply: element-wise product
+
         if index_layer == 0:
             outputs_previous_layer = target_input
         else:
             outputs_previous_layer = self.layers[index_layer - 1].output
-
-        derivative_vector = np.vectorize(current_layer.activation_function.derivative)(current_layer.net)
-        delta_error = np.multiply((delta_error_next_layer * next_layer.weights),
-                                  derivative_vector)  # np.multiply: element-wise product
         delta_weight = np.outer(delta_error, outputs_previous_layer)
 
         return delta_error, delta_weight
