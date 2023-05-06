@@ -8,7 +8,7 @@ import itertools
 import numpy as np
 import multiprocessing
 
-from src.NeuralNetwork import NeuralNetwork
+from src.neuralNetwork.NeuralNetwork import NeuralNetwork
 
 def retrain(self, best_model, best_parameters, target_inputs, target_outputs):
     """ Final retrain the best network after cross-validation process """
@@ -61,7 +61,6 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
     :param target_outputs: matrix containing the outputs
     :param k: number of folds
     :param model: model to use
-    :param kwargs: optional parameters for the model
     :return: the average error
     """
 
@@ -123,7 +122,6 @@ def grid_search(parameters_grid: dict, target_inputs: np.matrix, target_outputs:
 
     for model in models:
         for parameters_set in combination_grid:
-
             process = multiprocessing.Process(target=_cross_validation, args=(target_inputs, target_outputs, k, model, parameters_set, error_queue))
             process_list.append(process)
 
