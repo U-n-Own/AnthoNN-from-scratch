@@ -18,7 +18,7 @@ class IdentityFunction(ActivationFunction):
         return 1
 
 
-class SigmoideFunction(ActivationFunction):
+class SigmoidFunction(ActivationFunction):
     """
     The universal approximation theorem states that feedforward neural network with a linear output layer
     and at least one hidden layer with any "squashing" activation function such as Sigmoid or Logistic
@@ -26,15 +26,7 @@ class SigmoideFunction(ActivationFunction):
     with enough hidden units.
     Source: Deep Learning Book by Ian Goodfellow, Yoshua Bengio and Aaron Courville
     """
-
-    """ 
-    The universal approximation theorem states that feedforward neural network with a linear output layer
-    and at least one hidden layer with any "squashing" activation function such as Sigmoid or Logistic
-    can approximate functions from one finite-dimesional space to another with nonzero amount of error
-    with enough hidden units.
-    Source: Deep Learning Book by Ian Goodfellow, Yoshua Bengio and Aaron Courville 
-    """
-
+    
     def output(self, x: float) -> float:
         return 1.0 / (1 + np.exp(-x))
 
