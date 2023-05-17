@@ -1,5 +1,6 @@
 import numpy as np
 
+from src.neuralNetwork.MatrixInitialization import MatrixInitialization, ReandomInitialization
 from src.neuralNetwork.function import ActivationFunction
 
 
@@ -16,11 +17,9 @@ class Layer:
 
     activation_function: ActivationFunction # Funzione di attivazione usata in ogni neurone
 
-    # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch PRECENDETE.
+    # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch PRECENDETE e CORRENTE.
     # Usato per applicare il momentum (N.B. non contiene il learning rate)
     previous_delta_weight: np.matrix = None
-    # Contiene il delta_weight restitutio dall'algoritmo di backpropagation all'epoch CORRENTE.
-    # Usato per applicare il momentum (N.B. non contiene il learning rate)
     current_delta_weight: np.matrix = None
 
     current_delta_bias: np.ndarray = None
@@ -29,7 +28,8 @@ class Layer:
     output: np.matrix = None  # matrice (num_samples x num_neurons)
 
     def __init__(self, num_neurons: int, num_inputs: int, activation_function: ActivationFunction,
-                 min_value_weight=-0.03, max_value_weight=0.2, min_value_bias=-0.01, max_value_bias=0.2):
+                 weightsInitialization = ReandomInitialization(-0.03, 0.2),
+                 biasInitialization = ReandomInitialization(-0.01, 0.2)):
 
         if num_neurons <= 0:
             raise ValueError("num_neurons must be > 0")
@@ -37,19 +37,14 @@ class Layer:
             raise ValueError("num_inputs must be > 0")
         if activation_function is None:
             raise ValueError("activation_function must be != None")
-        if min_value_weight > max_value_weight:
-            raise ValueError(f"min_value_weight must be ({min_value_weight}) <= max_value_weight ({min_value_weight})")
-        if min_value_bias > max_value_bias:
-            raise ValueError(f"min_value_bias must be ({min_value_bias}) <= max_value_bias ({max_value_bias}) ")
 
         self.num_neurons = num_neurons
         self.num_inputs = num_inputs
 
         self.activation_function = activation_function
 
-        # set random biases and weights
-        self.biases = np.matrix(np.random.uniform(low=min_value_bias, high=max_value_bias, size=(1, num_neurons)))
-        self.weights = np.matrix(np.random.uniform(low=min_value_weight, high=max_value_weight, size=(num_neurons, num_inputs)))
+        self.biases = biasInitialization.generate((1, num_neurons))
+        self.weights = weightsInitialization.generate((num_neurons, num_inputs))
 
         self.current_delta_weight = np.matrix(np.zeros((num_neurons, num_inputs))) #Delta weight calcolato dall'algoritmo di backropagation
         self.current_delta_bias = np.matrix(np.zeros((1, num_neurons))) #Delta bias calcolato dall'algoritmo di backropagation
