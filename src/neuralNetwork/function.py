@@ -1,6 +1,4 @@
 import numpy as np
-
-
 class ActivationFunction:
 
     def output(self, x):
@@ -19,14 +17,14 @@ class IdentityFunction(ActivationFunction):
 
 
 class SigmoidFunction(ActivationFunction):
-    """
+    """ 
     The universal approximation theorem states that feedforward neural network with a linear output layer
     and at least one hidden layer with any "squashing" activation function such as Sigmoid or Logistic
     can approximate functions from one finite-dimesional space to another with nonzero amount of error
     with enough hidden units.
-    Source: Deep Learning Book by Ian Goodfellow, Yoshua Bengio and Aaron Courville
+    Source: Deep Learning Book by Ian Goodfellow, Yoshua Bengio and Aaron Courville 
     """
-    
+
     def output(self, x: float) -> float:
         return 1.0 / (1 + np.exp(-x))
 
@@ -48,6 +46,17 @@ class ReLuFunction(ActivationFunction):
         """ Can't derivate ReLu in 0, it's undefined, we simply return 0 """
         return 1 if x > 0 else 0
 
+class LeakReLuFunction(ActivationFunction):
+
+    def __init__(self, alpha=0.01):
+        self.alpha = alpha
+
+    def output(self, x: float) -> float:
+        return np.maximum(self.alpha * x, x)
+
+    def derivative(self, x: float) -> float:
+        return 1 if x > 0 else self.alpha
+
 class TanhFunction(ActivationFunction):
     def output(self, x: float) -> float:
         return np.tanh(x)
@@ -56,24 +65,43 @@ class TanhFunction(ActivationFunction):
         return 1 - np.tanh(x)**2
 
 class SoftplusFunction(ActivationFunction):
-    """
-    The softplus activation function Y = log(1 + e^X) ensures that the output is always positive. 
-    This activation function is a smooth continuous version of ReluFunction.
-    """
-
     def output(self, x: float) -> float:
         return np.log(1+np.exp(x))
 
     def derivative(self, x: float)-> float:
         return np.exp(x) / (np.exp(x)+1)
 
-class SoftmaxFunction(ActivationFunction):
-    """
-    Usually softmax is used for output unit in classification task to trasform the outputs into probabilities.
-    This may be probabilities for classify a certain image into the class we want.
-    """
+class SiluFunction(ActivationFunction):
     def output(self, x: float) -> float:
-        return np.exp(x) / np.sum(np.exp(x))
-    
+        return x * self._sigmoid(x)
+
     def derivative(self, x: float) -> float:
-        return self.output(x) * (1 - self.output(x))
+        return self._sigmoid(x) + x * self._sigmoid(x) * (1 - self._sigmoid(x))
+
+    def _sigmoid(self, x: float) -> float:
+        return 1.0 / (1 + np.exp(-x))
+
+class SELUFunction(ActivationFunction):
+    def __init__(self):
+        self.alpha = 1.67326
+        self.scale = 1.0507
+
+    def output(self, x: float) -> float:
+        return self.scale * (np.where(x >= 0, x, self.alpha * (np.exp(x) - 1)))
+
+    def derivative(self, x: float) -> float:
+        return self.scale * (np.where(x >= 0, 1, self.alpha * np.exp(x)))
+
+class ELUFunction(ActivationFunction):
+    def __init__(self, alpha=1.0):
+        if alpha <= 0:
+            raise ValueError("Alpha must be a positive value.")
+        self.alpha = alpha
+
+    def output(self, x: float) -> float:
+        return np.where(x >= 0, x, self.alpha * (np.exp(x) - 1))
+
+    def derivative(self, x: float) -> float:
+        return np.where(x >= 0, 1, self.alpha * np.exp(x))
+
+
