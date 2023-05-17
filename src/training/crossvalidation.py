@@ -3,6 +3,7 @@
 This library will contain our model selection and assessment algorithms.
 
 """
+import copy
 import itertools
 import numpy as np
 import multiprocessing
@@ -73,8 +74,8 @@ def _cross_validation(target_inputs: np.matrix, target_outputs: np.matrix, k: in
         training_inputs, training_outputs, validation_inputs, validation_outputs = _k_fold_partitioning(target_inputs,
                                                                                                        target_outputs,
                                                                                                        k, i)
-
-        training_error_history_fold, validation_error_history_fold = model.train(
+        modelCopy = copy.deepcopy(model)
+        training_error_history_fold, validation_error_history_fold = modelCopy.train(
             target_inputs_training = training_inputs, target_outputs_training = training_outputs,
             target_inputs_validation=validation_inputs, target_outputs_validation=validation_outputs,
             epochs=epochs, learning_rate=learning_rate, momentum_term=momentum_term,
