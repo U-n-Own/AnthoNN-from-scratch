@@ -148,35 +148,32 @@ class NeuralNetwork:
         Funzione di supporto per la funzione train. Controlla che gli argomenti passati alla funzione train siano validi
         """
 
-        if target_inputs_training is None:
-            raise ValueError("inputs must be != None")
-        if target_inputs_training.shape[1] != self.layers[0].num_inputs:
-            raise ValueError(
-                f"inputs.shape ({target_inputs_training.shape[1]}) deve essere uguale al numero di input accettati dalla rete neurale ({self.layers[0].num_inputs})")
+        if target_inputs_training is None and target_outputs_training is None:
+            raise ValueError("target_inputs_training and target_outputs_training must be both != None")
+        self._data_parameters_checking(target_inputs_training, target_outputs_training)
 
-        if target_outputs_training is None:
-            raise ValueError("target_outputs must be != None")
-        if target_outputs_training.shape[1] != self.layers[-1].num_neurons:
-            raise ValueError(
-                f"target_outputs.shape ({target_outputs_training.shape[1]}) deve essere uguale al numero di neuroni dell'ultimo layer ({self.layers[-1].num_neurons})")
 
         if type(target_inputs_validation) != type(target_outputs_validation):
             raise ValueError("target_inputs_validation and target_outputs_validation must be both None or both != None")
         if target_inputs_validation is not None and target_outputs_validation is not None:
-            if target_inputs_training.shape[1] != target_inputs_validation.shape[1]:
-                raise ValueError(f"target_inputs_training.shape[1] ({target_inputs_training.shape[1]}) deve essere "
-                                 f"uguale a target_inputs_validation.shape[1] ({target_inputs_validation.shape[1]})")
-            if target_outputs_training.shape[1] != target_outputs_validation.shape[1]:
-                raise ValueError(f"target_outputs_training.shape[1] ({target_outputs_training.shape[1]}) deve essere "
-                                 f"uguale a target_outputs_validation.shape[1] ({target_outputs_validation.shape[1]})")
-            if target_inputs_validation.shape[0] != target_outputs_validation.shape[0]:
-                raise ValueError(f"target_inputs_validation.shape[0] ({target_inputs_validation.shape[0]}) deve essere "
-                                 f"uguale a target_outputs_validation.shape[0] ({target_outputs_validation.shape[0]})")
+            self._data_parameters_checking(target_inputs_validation, target_outputs_validation)
 
         if learning_rate <= 0:
             raise ValueError("learning_rate must be > 0")
         if epochs < 0:
-            raise ValueError("epochs must be >= 0")
+            raise ValueError("epochs must be > 0")
+
+    def _data_parameters_checking(self, target_inputs: np.matrix, target_outputs: np.matrix):
+        if type(target_inputs) != np.matrix or type(target_outputs) != np.matrix:
+            raise ValueError("target_inputs and target_outputs must be both np.matrix")
+
+        if target_inputs.shape[1] != self.layers[0].num_inputs:
+            raise ValueError(f"inputs.shape ({target_inputs.shape[1]}) deve essere "
+                             f"uguale al numero di input accettati dalla rete neurale ({self.layers[0].num_inputs})")
+
+        if target_outputs.shape[1] != self.layers[-1].num_neurons:
+            raise ValueError( f"target_outputs.shape ({target_outputs.shape[1]}) deve essere uguale "
+                              f"al numero di neuroni dell'ultimo layer ({self.layers[-1].num_neurons})")
 
     def _training_on_epoch(self, target_inputs_training: np.matrix, target_outputs_training: np.matrix,
                            learning_rate: float, regularization_term: float, momentum_term: float):
@@ -194,17 +191,18 @@ class NeuralNetwork:
             # _backpropagation aggiorna il valore current_delta_weight
             self._backpropagation(target_input=target_input, target_output=target_output)
 
+
+        learning_rate = learning_rate / target_inputs_training.shape[0] # Serve per implementare il least mean square
         # Aggiorno i pesi e i bias
         for layer in self.layers:
             # N.B.learning_rate obbligatorio anche per il momentum
-            layer.weights = layer.weights + learning_rate * layer.current_delta_weight + \
-                            momentum_term * learning_rate  * layer.previous_delta_weight - \
-                            2 * regularization_term * layer.weights
+            delta_weight = learning_rate * layer.current_delta_weight + momentum_term * learning_rate * layer.previous_delta_weight
+            layer.weights = layer.weights + delta_weight - 2 * regularization_term * layer.weights
             layer.biases = layer.biases + learning_rate * layer.current_delta_bias
 
     def _backpropagation(self, target_input: np.matrix, target_output: np.matrix) -> None:
         """
-            Calcola il delta_weight tramite l'algoritmo di backpropagation
+            Calcola il delta_weight per ogni layer tramite l'algoritmo di backpropagation
 
             :target_input: matrice(1, num_inputs_rete_neurale)
             :target_outputs: matrice(1, num_neuroni_ultimo_layer)
@@ -233,18 +231,11 @@ class NeuralNetwork:
             :delta_error matrice(1, num_neurons_ultimo layer).
             :delta_weight matrice(num_neuroni_layer_precedente, num_neuroni_ultimo layer).
         """
-
-        if target_input is None or target_output is None:
-            raise ValueError("inputs and outputs must be != None")
-        if target_input.shape[0] != 1 or target_output.shape[0] != 1:
-            raise ValueError("L'input e l'output della neural network devono contenere un solo sample")
-
-
         nn_outputs = self.predict(target_input)
         output_layer = self.layers[-1]
 
         derivative_vector = np.vectorize(output_layer.activation_function.derivative)(output_layer.net)
-        delta_error = np.multiply((target_output - nn_outputs), derivative_vector)  # np.multiply: element-wise product
+        delta_error = np.multiply((target_output - nn_outputs), derivative_vector)
 
         if len(self.layers) == 1:
             output_penultimate_layer = target_input
@@ -262,21 +253,11 @@ class NeuralNetwork:
         :delta_error_next_layer matrice(1, num_neuroni_layer_successivo). L'i-esimo elemento è il delta_error del i-esimo neurone.
         """
 
-        if target_input is None:
-            raise ValueError("inputs must be != None")
-        if target_input.shape[0] != 1:
-            raise ValueError("L'input  della neural network deve contenere un solo sample")
-        if delta_error_next_layer is None:
-            raise ValueError("delta_error_next_layer must be != None")
-        if delta_error_next_layer.shape != (1, self.layers[index_layer + 1].num_neurons):
-            raise ValueError(f"delta_error_next_layer.shape ({delta_error_next_layer.shape}) deve essere "
-                             f"uguale al numero di neuroni del layer successivo ({self.layers[-1].num_neurons})")
-
         next_layer = self.layers[index_layer + 1]
         current_layer = self.layers[index_layer]
 
         derivative_vector = np.vectorize(current_layer.activation_function.derivative)(current_layer.net)
-        delta_error = np.multiply((delta_error_next_layer * next_layer.weights), derivative_vector)  # np.multiply: element-wise product
+        delta_error = np.multiply((delta_error_next_layer * next_layer.weights), derivative_vector)
 
         if index_layer == 0:
             outputs_previous_layer = target_input
