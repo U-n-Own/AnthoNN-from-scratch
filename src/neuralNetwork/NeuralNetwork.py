@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+import os
 
 from src.neuralNetwork.Layer import Layer
 from src.neuralNetwork.error import Error, MeanSquaredError
@@ -47,7 +48,7 @@ class NeuralNetwork:
             current_layer_biases.append(layer.biases)
             weights.update({layer: current_layer_weights})
             biases.update({layer: current_layer_biases})
-
+  
         return weights, biases
 
     def set_weights_and_biases(self, weights: dict, biases: dict):
@@ -65,6 +66,56 @@ class NeuralNetwork:
             # Overwrite weights and biases of each layer
             layer.weights = weights[layer]
             layer.biases = biases[layer]
+
+    def save_model(self, model_name: str = '', model_type: str = 'cup'):
+        """ Save model in the directory cup_models
+
+        #TODO 
+        model_name: name of the model we want to save
+        model_type: on what we trained cup or any other dataset
+        """
+        
+        activations = []
+        data = {}
+        num_layers = 0
+        # save activation function of each layer in a file as text
+        for layer in self.layers:
+            activations.append(layer.activation_function) 
+         
+        # save weights and biases in a file, weights and biases are get as dictionaries
+        for layer, (weights, biases) in enumerate(self.get_weights_and_biases()):
+            num_layers+=1
+            data.update({layer: (weights, biases)})
+                    
+        folder_path = '../../models'
+
+        # Create the parent directory if it does not exist
+        os.makedirs(folder_path, exist_ok=True)
+
+        # Specify the file path within the folder
+        file_path = os.path.join(folder_path, model_type+'_'+model_name+'.npy')
+
+        # Save the dictionary containing the weights and biases to the specified file path
+        np.save(file_path, data)
+
+    def load_model(self, model_saved):
+        """ #TODO Idea is to create a model on the fly and return it after we loaded the weights and biases
+
+        Args:
+            model_path (str): path of the model we want to load
+        """
+    
+        # extract weight and biases from data dictionary
+        weights = {}
+        biases = {}
+        
+        # Load the dictionary containing the weights and biases using numpy.load
+        data = np.load(model_saved, allow_pickle=True).item()
+        
+        
+        
+        # Set weights and biases of the model
+        self.set_weights_and_biases(weights, biases)
 
     def validate(self, validation_inputs: np.matrix, validation_outputs: np.matrix) -> float:
         # TODO controllo argomenti
