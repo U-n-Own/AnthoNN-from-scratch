@@ -1,10 +1,26 @@
 import numpy as np
-class ActivationFunction:
+from abc import ABC, abstractmethod
 
+
+class ActivationFunction(ABC):
+    """
+    Classe astratta che rappresenta una generica funzione di attivazione.
+    """
+    
+
+    @abstractmethod
     def output(self, x):
+        """
+        Definizione della funzione di attivazione.
+        """
         raise NotImplementedError()
 
+    @abstractmethod
     def derivative(self, x):
+        """
+        Derivata della funzione di attivazione.
+        """
+        
         raise NotImplementedError()
 
 

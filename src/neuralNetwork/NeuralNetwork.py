@@ -1,21 +1,22 @@
+import copy
+import pickle
 from typing import List
 
 import numpy as np
 import os
-
 from src.neuralNetwork.Layer import Layer
 from src.neuralNetwork.error import Error, MeanSquaredError
 
 
 class NeuralNetwork:
     """
-    Documentazione: https://www.notion.so/Documentazione-codice-bb9e8289652d4fff9faa71d0ef93afba
+    Documentazione: https://evergreen-bosworth-0ee.notion.site/Documentazione-codice-bb9e8289652d4fff9faa71d0ef93afba
     """
 
-    layers: List[Layer] = []
+    layers: List[Layer] = [] # Hidden e output layer della rete (non contiene l'input layer)
     error: Error
 
-    def __init__(self, layers: [Layer], error: Error = MeanSquaredError()):
+    def __init__(self, layers: List[Layer], error: Error = MeanSquaredError()):
         if layers is None:
             raise ValueError("layers must be != None")
         if len(layers) == 0:
@@ -32,94 +33,44 @@ class NeuralNetwork:
         self.error = error
 
     def get_weights_and_biases(self):
-        # TODO controllare se fa una shallow copy
-        # TODO save weights in a file for later use
-        """ Method used to save final weights of our model
-
+        """ 
+        Save weights and biases of each layer in a dictionary
         :return: list of weights of each layer in dictionary form
         """
         weights = {}
         biases = {}
-        current_layer_weights = []
-        current_layer_biases = []
 
-        for layer in self.layers:
-            current_layer_weights.append(layer.weights)
-            current_layer_biases.append(layer.biases)
-            weights.update({layer: current_layer_weights})
-            biases.update({layer: current_layer_biases})
-  
+        for i, layer in enumerate(self.layers):
+            current_layer_weights = copy.deepcopy(layer.weights)
+            current_layer_biases = copy.deepcopy(layer.biases)
+            weights[f"layer_{i}"] = current_layer_weights
+            biases[f"layer_{i}"] = current_layer_biases
+
+
         return weights, biases
 
-    def set_weights_and_biases(self, weights: dict, biases: dict):
-        """ Method used to set/load weights of our trained model """
-        # TODO Check if weights and biases are equal after the set
-        # Check if number of layer of current net is equal to the number of layer we have in the dictionary
-        if len(self.layers) != len(weights):
-            raise ValueError(
-                f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded weights ({len(weights)})")
-        if len(self.layers) != len(biases):
-            raise ValueError(
-                f"Number of layers in the network ({len(self.layers)}) must be equal to the number of layers of loaded biases ({len(biases)})")
-
-        for layer in self.layers:
-            # Overwrite weights and biases of each layer
-            layer.weights = weights[layer]
-            layer.biases = biases[layer]
-
-    def save_model(self, model_name: str = '', model_type: str = 'cup'):
-        """ Save model in the directory cup_models
-
-        #TODO 
-        model_name: name of the model we want to save
-        model_type: on what we trained cup or any other dataset
+            
+    def save_model(self, destination_dir: str):
+        """
+        Save the model in a file
+        destination_dir: path of the file where the model will be saved
         """
         
-        activations = []
-        data = {}
-        num_layers = 0
-        # save activation function of each layer in a file as text
-        for layer in self.layers:
-            activations.append(layer.activation_function) 
-         
-        # save weights and biases in a file, weights and biases are get as dictionaries
-        for layer, (weights, biases) in enumerate(self.get_weights_and_biases()):
-            num_layers+=1
-            data.update({layer: (weights, biases)})
-                    
-        folder_path = '../../models'
-
-        # Create the parent directory if it does not exist
-        os.makedirs(folder_path, exist_ok=True)
-
-        # Specify the file path within the folder
-        file_path = os.path.join(folder_path, model_type+'_'+model_name+'.npy')
-
-        # Save the dictionary containing the weights and biases to the specified file path
-        np.save(file_path, data)
-
-    def load_model(self, model_saved):
-        """ #TODO Idea is to create a model on the fly and return it after we loaded the weights and biases
-
-        Args:
-            model_path (str): path of the model we want to load
+        with open(destination_dir, "wb") as file:
+            pickle.dump(self, file)
+            
+    def load_model(self, source_dir: str):
         """
-    
-        # extract weight and biases from data dictionary
-        weights = {}
-        biases = {}
+        Load the model from a file
+        source_dir: path of the file where the model is saved
+        """
         
-        # Load the dictionary containing the weights and biases using numpy.load
-        data = np.load(model_saved, allow_pickle=True).item()
+        with open(source_dir, "rb") as file:
+            return pickle.load(file)
         
-        
-        
-        # Set weights and biases of the model
-        self.set_weights_and_biases(weights, biases)
 
-    def validate(self, validation_inputs: np.matrix, validation_outputs: np.matrix) -> float:
-        # TODO controllo argomenti
-        """ Evaluating the network error on validation data """
+    def validate(self, validation_inputs: np.matrix, validation_outputs: np.matrix) -> np.float64:
+        """ evaluate the network error on validation data """
 
         predicted_outputs = self.predict(validation_inputs)
         validation_error = self.error.calculate_total_error(validation_outputs, predicted_outputs)
@@ -155,7 +106,7 @@ class NeuralNetwork:
             :target_outputs_training: matrice(num_samples, num_neuroni_ultimo_layer) di outputs per il training
             :epochs: numero d'iterazioni dell'algoritmo di backpropagation
 
-            :return: Lista di errori. L'i-esimo elemento contiene l'errore dell'i-esimo epoch.
+            :return: Lista degli errori sul training e, eventualmente, validation. L'i-esimo elemento contiene l'errore dell'i-esimo epoch.
         """
         self._train_parameters_checking(target_inputs_training=target_inputs_training,
                                         target_outputs_training=target_outputs_training,
@@ -215,6 +166,10 @@ class NeuralNetwork:
             raise ValueError("epochs must be > 0")
 
     def _data_parameters_checking(self, target_inputs: np.matrix, target_outputs: np.matrix):
+        """
+        Funzione di supporto per la funzione train. Controlla che gli argomenti passati alla funzione train siano validi
+        """
+        
         if type(target_inputs) != np.matrix or type(target_outputs) != np.matrix:
             raise ValueError("target_inputs and target_outputs must be both np.matrix")
 
@@ -272,22 +227,21 @@ class NeuralNetwork:
 
     def _backpropagation_output_layer(self, target_input: np.matrix, target_output: np.matrix) -> (np.matrix, np.matrix):
         """
-            spiegazione: https://www.notion.so/Documentazione-codice-bb9e8289652d4fff9faa71d0ef93afba?pvs=4#b60b491c3af842c8b6fa2531c88b5112
+            spiegazione nella sezione "Backpropagation": https://evergreen-bosworth-0ee.notion.site/Documentazione-codice-bb9e8289652d4fff9faa71d0ef93afba
 
             Applica algoritmo di backpropagation all'ultimo layer
             :target_input: matrice(1, num_inputs_rete_neurale)
             :target_output: matrice(1, num_neuroni_ultimo_layer)
 
             :return: delta_error, delta_weight
-            :delta_error matrice(1, num_neurons_ultimo layer).
-            :delta_weight matrice(num_neuroni_layer_precedente, num_neuroni_ultimo layer).
+                delta_error: matrice(1, num_neurons_ultimo layer).
+                delta_weight matrice(num_neuroni_layer_precedente, num_neuroni_ultimo layer).
         """
         nn_outputs = self.predict(target_input)
         output_layer = self.layers[-1]
 
         derivative_vector = np.vectorize(output_layer.activation_function.derivative)(output_layer.net)
-        delta_error = np.multiply((target_output - nn_outputs), derivative_vector)
-
+        delta_error = np.multiply((target_output-nn_outputs), derivative_vector)
         if len(self.layers) == 1:
             output_penultimate_layer = target_input
         else:

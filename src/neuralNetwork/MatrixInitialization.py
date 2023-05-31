@@ -1,6 +1,11 @@
 import numpy as np
+from abc import ABC, abstractmethod
 
-class MatrixInitialization:
+
+class MatrixInitialization(ABC):
+    """
+    Classe astratta che rappresenta una generica inizializzazione di una matrice.
+    """
     def generate(self, weights_shape: tuple) -> np.matrix:
         raise NotImplementedError()
 
